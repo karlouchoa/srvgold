@@ -1,0 +1,23 @@
+# 1 - Gere a migração localmente
+npx prisma migrate dev --schema=prisma/erp.prisma  --name change_t_users_varchar
+
+# 2 - Suba essa migração no banco‐modelo (goldpdv)
+npx prisma migrate deploy --schema=prisma/erp.prisma
+
+# 3 - Regere o Prisma Client
+npx prisma generate --schema=prisma/erp.prisma
+
+# 4 - Propague as mudanças para todos os tenants
+npm run migrate:tenants
+
+multiTenantERP
+
+ Depois do ajuste no schema:
+
+Rode npx prisma generate --schema=prisma/erp.prisma para atualizar o client.
+
+Atualize o banco template (goldpdv) com npx prisma db push --schema=prisma/erp.prisma (adicione --accept-data-loss só se estiver removendo/renomeando colunas).
+
+Propague pros tenants com npx ts-node scripts/migrate-tenants.ts (ou equivalente em produção).
+
+Ajuste serviços/DTOs que consomem o modelo e reinicie o servidor.

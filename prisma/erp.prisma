@@ -1,0 +1,2102 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../prisma/generated/erp"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("ERP_TEMPLATE_URL")
+}
+
+model banco {
+  id               BigInt                @id @default(autoincrement())
+  uuid             String                @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  codigo           String                @db.VarChar(4)
+  nome             String                @db.VarChar(100)
+  bloqueia_venda_sn Boolean?             @default(false)
+  digital_sn       Boolean?              @default(false)
+  ativo_sn         Boolean?              @default(false)
+  isdeleted        Boolean?              @default(false)
+  created_at       DateTime?             @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?             @default(now()) @db.Timestamp(6)
+  conta_config     banco_conta?          @relation("BancoConta")
+  boleto_config    banco_boleto_config?  @relation("BancoBoletoConfig")
+  pix_config       banco_pix_config?     @relation("BancoPixConfig")
+  credenciais      banco_credenciais?    @relation("BancoCredenciais")
+  caixa_documentos caixa_documentos[]
+
+  @@index([codigo], map: "idx_banco_codigo")
+  @@index([isdeleted], map: "idx_banco_isdeleted")
+  @@index([nome], map: "idx_banco_nome")
+  @@index([uuid], map: "idx_banco_uuid")
+}
+
+model banco_conta {
+  id             BigInt    @id @default(autoincrement())
+  banco_id       BigInt    @unique
+  cnpj_conta     String?   @db.VarChar(18)
+  agencia        String?   @db.VarChar(10)
+  digito_agencia String?   @db.VarChar(2)
+  conta          String    @db.VarChar(20)
+  digito_conta   String?   @db.VarChar(2)
+  contabil       String?   @db.VarChar(20)
+  lote           Int?
+  limite_banco   Decimal?  @db.Decimal(9, 2)
+  cbhost         Int?      @default(0)
+
+  banco banco @relation("BancoConta", fields: [banco_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model banco_boleto_config {
+  id                 BigInt   @id @default(autoincrement())
+  banco_id           BigInt   @unique
+  carteira           String?  @db.VarChar(10)
+  variacao_carteira  String?  @db.VarChar(3)
+  cedente            String?  @db.VarChar(20)
+  digito_cedente     String?  @db.VarChar(2)
+  contrato           String?  @db.VarChar(20)
+  emite_boleto_sn    Boolean? @default(false)
+  numero_boleto      Int?     @default(0)
+  taxa_emissao       Decimal? @db.Decimal(9, 2)
+  tipo_cobranca      String?  @db.VarChar(60)
+  layout_arquivo     String?  @db.VarChar(30)
+  codigo_transmissao String?  @db.VarChar(20)
+
+  banco banco @relation("BancoBoletoConfig", fields: [banco_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model banco_pix_config {
+  id             BigInt   @id @default(autoincrement())
+  banco_id       BigInt   @unique
+  chave_pix      String?  @db.VarChar(100)
+  tipo_chave_pix String?  @db.VarChar(15)
+  psp            String?  @db.VarChar(20)
+  ambiente       String?  @db.VarChar(20)
+
+  banco banco @relation("BancoPixConfig", fields: [banco_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model banco_credenciais {
+  id                  BigInt   @id @default(autoincrement())
+  banco_id            BigInt   @unique
+  caminho_certificado String?  @db.VarChar(200)
+  senha_certificado   String?  @db.VarChar(60)
+  client_id           String?  @db.VarChar(100)
+  client_secret       String?  @db.VarChar(100)
+
+  banco banco @relation("BancoCredenciais", fields: [banco_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+model caixa_aberturas {
+  id_caixa         BigInt             @id @default(autoincrement())
+  uuid             String             @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa       BigInt
+  id_usuario       BigInt
+  data_abertura    DateTime           @default(now()) @db.Timestamp(6)
+  saldo_inicial    Decimal?           @default(0) @db.Decimal(18, 2)
+  data_fechamento  DateTime?          @db.Timestamp(6)
+  saldo_final      Decimal?           @db.Decimal(18, 2)
+  ip_abertura      String?            @db.VarChar(15)
+  status           String?            @default("ABERTO") @db.VarChar(20)
+  created_at       DateTime?          @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?          @default(now()) @db.Timestamp(6)
+  empresa          empresa            @relation(fields: [id_empresa], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuarios         usuarios           @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
+  caixa_documentos caixa_documentos[]
+  caixa_pagamentos caixa_pagamentos[]
+}
+
+model caixa_documentos {
+  id_lancamento   BigInt           @id @default(autoincrement())
+  uuid            String           @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_caixa        BigInt
+  id_tipo_pg      BigInt?
+  numero_doc      String?          @db.VarChar(30)
+  historico       String?          @db.VarChar(255)
+  valor           Decimal          @db.Decimal(18, 2)
+  status          String?          @default("CONFIRMADO") @db.VarChar(20)
+  banco_id        BigInt?
+  tipo            String?          @db.VarChar(20)
+  usuario         String?          @db.VarChar(50)
+  data_lanc       DateTime?        @default(now()) @db.Timestamp(6)
+  created_at      DateTime?        @default(now()) @db.Timestamp(6)
+  updated_at      DateTime?        @default(now()) @db.Timestamp(6)
+  banco           banco?           @relation(fields: [banco_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  caixa_aberturas caixa_aberturas  @relation(fields: [id_caixa], references: [id_caixa], onDelete: Cascade, onUpdate: NoAction)
+  tipos_pagamento tipos_pagamento? @relation(fields: [id_tipo_pg], references: [id_tipo], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model caixa_pagamentos {
+  id_pagamento     BigInt            @id @default(autoincrement())
+  uuid             String            @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_caixa         BigInt
+  id_venda         BigInt?
+  id_tipo_pg       BigInt
+  id_forma_pg      BigInt?
+  valor            Decimal           @db.Decimal(18, 2)
+  parcelas         Int?
+  taxa             Decimal?          @db.Decimal(9, 2)
+  valor_taxa       Decimal?          @default(dbgenerated("(valor * (taxa / (100)::numeric))")) @db.Decimal(18, 2)
+  tipo             String?           @db.VarChar(20)
+  data_receb       DateTime?         @default(now()) @db.Timestamp(6)
+  usuario          String?           @db.VarChar(50)
+  created_at       DateTime?         @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?         @default(now()) @db.Timestamp(6)
+  caixa_aberturas  caixa_aberturas   @relation(fields: [id_caixa], references: [id_caixa], onDelete: Cascade, onUpdate: NoAction)
+  formas_pagamento formas_pagamento? @relation(fields: [id_forma_pg], references: [id_forma], onDelete: NoAction, onUpdate: NoAction)
+  tipos_pagamento  tipos_pagamento   @relation(fields: [id_tipo_pg], references: [id_tipo], onDelete: NoAction, onUpdate: NoAction)
+  vendas           vendas?           @relation(fields: [id_venda], references: [id_venda], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model cargo {
+  id           BigInt        @id @default(autoincrement())
+  uuid         String        @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa   BigInt
+  descricao    String        @db.VarChar(120)
+  salario_base Decimal       @db.Decimal(12, 2)
+  isdeleted    Boolean?      @default(false)
+  created_at   DateTime?     @default(now()) @db.Timestamp(6)
+  updated_at   DateTime?     @default(now()) @db.Timestamp(6)
+  empresa      empresa       @relation(fields: [id_empresa], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  funcionario  funcionario[]
+
+  @@index([id_empresa], map: "idx_cargo_id_empresa")
+  @@index([isdeleted], map: "idx_cargo_isdeleted")
+  @@index([uuid], map: "idx_cargo_uuid")
+}
+
+model cidade {
+  id               BigInt             @id @default(autoincrement())
+  uuid             String             @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome             String             @db.VarChar(100)
+  id_estado        BigInt
+  ddd              String?            @db.Char(3)
+  codigo_ibge      String?            @db.VarChar(10)
+  estado           estado             @relation(fields: [id_estado], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cliente_endereco cliente_endereco[]
+  empresa          empresa[]
+
+  @@index([codigo_ibge], map: "idx_cidade_ibge")
+  @@index([id_estado], map: "idx_cidade_id_estado")
+  @@index([nome], map: "idx_cidade_nome")
+}
+
+model clasfis {
+  id_clasfis       BigInt             @id @default(autoincrement())
+  uuid             String             @unique(map: "idx_clasfis_uuid") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cod_clasfis      String             @unique @db.VarChar(10)
+  descricao        String?            @db.VarChar(255)
+  rest_icms        Decimal?           @db.Decimal(18, 2)
+  cod_generico     Int?
+  valor_perc       Decimal?           @db.Decimal(5, 2)
+  tributacao_itens tributacao_itens[]
+}
+
+model cliente {
+  id                          BigInt               @id @default(autoincrement())
+  uuid                        String               @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa                  BigInt
+  tipo                        String               @default("J") @db.VarChar(1)
+  nome_razao                  String               @db.VarChar(120)
+  nome_fantasia               String?              @db.VarChar(120)
+  cpf_cnpj                    String?              @db.VarChar(20)
+  inscricao_estadual          String?              @db.VarChar(20)
+  inscricao_municipal         String?              @db.VarChar(20)
+  suframa                     String?              @db.VarChar(20)
+  email                       String?              @db.VarChar(100)
+  telefone                    String?              @db.VarChar(20)
+  celular                     String?              @db.VarChar(20)
+  site                        String?              @db.VarChar(100)
+  limite_credito              Decimal?             @default(0) @db.Decimal(18, 2)
+  condicao_pagto              Int?
+  dia_vencimento              Int?                 @default(0)
+  avaliacao_sn                Boolean?             @default(true)
+  atacadista_sn               Boolean?             @default(false)
+  id_vendedor                 BigInt?
+  observacao                  String?
+  ativo_sn                    Boolean?             @default(true)
+  comissao_vendedor_fixado_sn Boolean?             @default(false)
+  ignora_analise_credito_sn   Boolean?             @default(false)
+  desconto_boleto_sn          Boolean?             @default(false)
+  id_tabela_preco             BigInt?
+  faturamento_mensal_sn       Boolean?             @default(false)
+  isdeleted                   Boolean?             @default(false)
+  created_at                  DateTime?            @default(now()) @db.Timestamp(6)
+  updated_at                  DateTime?            @default(now()) @db.Timestamp(6)
+  empresa                     empresa              @relation(fields: [id_empresa], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cliente_associado           cliente_associado[]
+  cliente_dependente          cliente_dependente[]
+  cliente_endereco            cliente_endereco[]
+  cliente_referencia          cliente_referencia[]
+  cliente_socio               cliente_socio[]
+  comandas                    comandas[]
+  contas_receber              contas_receber[]
+  equipamento                 equipamento[]
+  notas_fiscais               notas_fiscais[]
+  reparcelamentos             reparcelamentos[]
+  vendas                      vendas[]
+
+  @@index([id_empresa], map: "idx_cliente_id_empresa")
+  @@index([isdeleted], map: "idx_cliente_isdeleted")
+  @@index([nome_razao], map: "idx_cliente_nome_razao")
+  @@index([uuid], map: "idx_cliente_uuid")
+}
+
+model cliente_associado {
+  id                 BigInt    @id @default(autoincrement())
+  uuid               String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_cliente         BigInt
+  matricula          String?   @db.VarChar(20)
+  dt_admissao        DateTime? @db.Date
+  sexo               String?   @db.Char(1)
+  profissao          String?   @db.VarChar(60)
+  pai                String?   @db.VarChar(120)
+  mae                String?   @db.VarChar(120)
+  conjuge            String?   @db.VarChar(120)
+  renda_principal    Decimal?  @db.Decimal(18, 2)
+  renda_complementar Decimal?  @db.Decimal(18, 2)
+  isdeleted          Boolean?  @default(false)
+  created_at         DateTime? @default(now()) @db.Timestamp(6)
+  updated_at         DateTime? @default(now()) @db.Timestamp(6)
+  cliente            cliente   @relation(fields: [id_cliente], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_cliente], map: "idx_cliente_associado_id_cliente")
+  @@index([uuid], map: "idx_cliente_associado_uuid")
+}
+
+model cliente_dependente {
+  id              BigInt    @id @default(autoincrement())
+  uuid            String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_cliente      BigInt
+  nome            String    @db.VarChar(120)
+  data_nascimento DateTime? @db.Date
+  parentesco      String?   @db.VarChar(50)
+  isdeleted       Boolean?  @default(false)
+  created_at      DateTime? @default(now()) @db.Timestamp(6)
+  updated_at      DateTime? @default(now()) @db.Timestamp(6)
+  cliente         cliente   @relation(fields: [id_cliente], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_cliente], map: "idx_cliente_dependente_id_cliente")
+  @@index([uuid], map: "idx_cliente_dependente_uuid")
+}
+
+model cliente_endereco {
+  id          BigInt    @id @default(autoincrement())
+  uuid        String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_cliente  BigInt
+  tipo        String    @db.VarChar(20)
+  logradouro  String?   @db.VarChar(120)
+  numero      String?   @db.VarChar(10)
+  complemento String?   @db.VarChar(60)
+  bairro      String?   @db.VarChar(60)
+  id_cidade   BigInt?
+  cep         String?   @db.VarChar(10)
+  isdeleted   Boolean?  @default(false)
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  updated_at  DateTime? @default(now()) @db.Timestamp(6)
+  cidade      cidade?   @relation(fields: [id_cidade], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  cliente     cliente   @relation(fields: [id_cliente], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_cliente], map: "idx_cliente_endereco_id_cliente")
+  @@index([isdeleted], map: "idx_cliente_endereco_isdeleted")
+  @@index([tipo], map: "idx_cliente_endereco_tipo")
+  @@index([uuid], map: "idx_cliente_endereco_uuid")
+}
+
+model cliente_referencia {
+  id         BigInt    @id @default(autoincrement())
+  uuid       String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_cliente BigInt
+  tipo       String    @db.VarChar(20)
+  descricao  String?   @db.VarChar(100)
+  telefone   String?   @db.VarChar(20)
+  observacao String?   @db.VarChar(200)
+  isdeleted  Boolean?  @default(false)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+  cliente    cliente   @relation(fields: [id_cliente], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_cliente], map: "idx_cliente_ref_id_cliente")
+  @@index([isdeleted], map: "idx_cliente_ref_isdeleted")
+  @@index([tipo], map: "idx_cliente_ref_tipo")
+  @@index([uuid], map: "idx_cliente_ref_uuid")
+}
+
+model cliente_socio {
+  id         BigInt    @id @default(autoincrement())
+  uuid       String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_cliente BigInt
+  nome       String    @db.VarChar(120)
+  percentual Decimal?  @db.Decimal(5, 2)
+  isdeleted  Boolean?  @default(false)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+  cliente    cliente   @relation(fields: [id_cliente], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_cliente], map: "idx_cliente_socio_id_cliente")
+  @@index([isdeleted], map: "idx_cliente_socio_isdeleted")
+  @@index([uuid], map: "idx_cliente_socio_uuid")
+}
+
+model codigos_barras {
+  id_barcode BigInt   @id @default(autoincrement())
+  uuid       String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_item    BigInt
+  codigo     String   @unique(map: "idx_codigobarras_codigo") @db.VarChar(30)
+  tipo       String?  @default("EAN13") @db.VarChar(20)
+  isdeleted  Boolean? @default(false)
+  itens      itens    @relation(fields: [id_item], references: [id_item], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_item], map: "idx_codigobarras_item")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model comandas {
+  id_comanda      BigInt           @id @default(autoincrement())
+  uuid            String           @unique(map: "idx_comandas_uuid") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa      BigInt
+  numero          Int
+  id_cliente      BigInt?
+  id_usuario      BigInt?
+  id_motorista    BigInt?
+  status          String           @default("A") @db.Char(1)
+  data_abertura   DateTime         @default(now()) @db.Timestamp(6)
+  data_fechamento DateTime?        @db.Timestamp(6)
+  qtd_itens       Decimal?         @default(0) @db.Decimal(9, 2)
+  valor_total     Decimal?         @default(0) @db.Decimal(18, 2)
+  troco_para      Decimal?         @db.Decimal(18, 2)
+  observacao      String?          @db.VarChar(255)
+  isdeleted       Boolean?         @default(false)
+  created_at      DateTime?        @default(now()) @db.Timestamp(6)
+  updated_at      DateTime?        @default(now()) @db.Timestamp(6)
+  cliente         cliente?         @relation(fields: [id_cliente], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  empresa         empresa          @relation(fields: [id_empresa], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  motoristas      motoristas?      @relation(fields: [id_motorista], references: [id_motorista], onDelete: NoAction, onUpdate: NoAction)
+  usuarios        usuarios?        @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
+  comandas_itens  comandas_itens[]
+
+  @@unique([id_empresa, numero], map: "uq_comandas_numero")
+  @@index([id_empresa], map: "idx_comandas_empresa")
+  @@index([status], map: "idx_comandas_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model comandas_itens {
+  id_item_comanda  BigInt           @id @default(autoincrement())
+  uuid             String           @unique(map: "idx_comandas_itens_uuid") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_comanda       BigInt
+  id_item          BigInt
+  id_unidade       BigInt?
+  quantidade       Decimal          @db.Decimal(18, 4)
+  preco_unitario   Decimal          @db.Decimal(18, 4)
+  desconto_valor   Decimal?         @default(0) @db.Decimal(18, 2)
+  total_item       Decimal?         @default(dbgenerated("((preco_unitario * quantidade) - COALESCE(desconto_valor, (0)::numeric))")) @db.Decimal(18, 2)
+  id_vendedor      BigInt?
+  observacao       String?          @db.VarChar(255)
+  status           String           @default("A") @db.Char(1)
+  data_atendimento DateTime?        @db.Timestamp(6)
+  impresso         Boolean          @default(false)
+  isdeleted        Boolean?         @default(false)
+  created_at       DateTime?        @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?        @default(now()) @db.Timestamp(6)
+  comandas         comandas         @relation(fields: [id_comanda], references: [id_comanda], onDelete: Cascade, onUpdate: NoAction)
+  itens            itens            @relation(fields: [id_item], references: [id_item], onDelete: NoAction, onUpdate: NoAction)
+  unidades_medida  unidades_medida? @relation(fields: [id_unidade], references: [id_unidade], onDelete: NoAction, onUpdate: NoAction)
+  vendedores       vendedores?      @relation(fields: [id_vendedor], references: [id_vendedor], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_comanda], map: "idx_comandas_itens_comanda")
+  @@index([id_item], map: "idx_comandas_itens_item")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model configuracao_empresa {
+  id                                         BigInt    @id @default(autoincrement())
+  uuid                                       String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa                                 BigInt
+  id_banco_tef                               BigInt?
+  juros_dia                                  Decimal?  @db.Decimal(9, 3)
+  multa_atraso                               Decimal?  @db.Decimal(9, 2)
+  dias_protesto                              Int?
+  id_impressora_exp                          BigInt?
+  id_impressora_imed                         BigInt?
+  id_impressora_ped                          BigInt?
+  tipo_impressao_exp                         String?   @db.VarChar(20)
+  imprime_boleto_sn                          Boolean?  @default(false)
+  ativo_sn                                   Boolean?  @default(true)
+  mensagem_fixa_nota                         String?   @db.VarChar(200)
+  path_logo                                  String?   @db.VarChar(200)
+  licenca                                    String?   @db.VarChar(60)
+  atacadista_sn                              Boolean?  @default(false)
+  observacao                                 String?
+  conta_contabil                             String?   @db.VarChar(20)
+  centro_distribuicao                        Boolean?  @default(false)
+  ver_centro_distribuicao                    Boolean?  @default(false)
+  custo_operacional                          Decimal?  @db.Decimal(12, 2)
+  tributos_federais                          Decimal?  @db.Decimal(12, 2)
+  pis_cofins                                 Decimal?  @db.Decimal(12, 2)
+  industria_sn                               Boolean?  @default(false)
+  matriz_sn                                  Boolean?  @default(false)
+  certificado_digital                        String?   @db.VarChar(120)
+  path_certificado                           String?   @db.VarChar(200)
+  senha_certificado                          String?   @db.VarChar(60)
+  path_logo_nfe                              String?   @db.VarChar(200)
+  pede_cadastro_os                           Boolean?  @default(false)
+  regime_fiscal                              String?   @db.VarChar(5)
+  codigo_regime_tributario                   String?   @db.VarChar(5)
+  representacao_sn                           Boolean?  @default(false)
+  id_matriz                                  BigInt?
+  path_nfe                                   String?   @db.VarChar(200)
+  path_nfc                                   String?   @db.VarChar(200)
+  path_nfs                                   String?   @db.VarChar(200)
+  path_cte                                   String?   @db.VarChar(200)
+  id_csc                                     BigInt?
+  token_csc                                  String?   @db.VarChar(120)
+  consulta_cliente_telefone                  Boolean?  @default(false)
+  imprime_recibo_cx                          Boolean?  @default(false)
+  carrega_ultimo_preco                       Boolean?  @default(false)
+  revende_insumo_reciclado                   Boolean?  @default(false)
+  promocao_tipo_pagamento_sn                 Boolean?  @default(false)
+  prioriza_estoque_local                     Boolean?  @default(false)
+  imprime_materiaprima_pedido                Boolean?  @default(false)
+  mostrar_preco_materiaprima_pedido          Boolean?  @default(false)
+  aliquota_iss                               Decimal?  @db.Decimal(6, 2)
+  petshop_sn                                 Boolean?  @default(false)
+  autoriza_venda_abaixo_quantidade_embalagem Boolean?  @default(false)
+  controla_saida_comanda                     Boolean?  @default(false)
+  ler_codigo_barras_modelo2                  Boolean?  @default(false)
+  tipo_empresa                               String?   @db.VarChar(40)
+  bloqueia_item_sem_saldo_pdv                Boolean?  @default(false)
+  pedir_taxa_de_entrega                      Boolean?  @default(false)
+  imprimir_taxa_de_entrega_no_nfc            Boolean?  @default(false)
+  agenda_por_hora                            Boolean?  @default(false)
+  trabalha_com_coleta                        Boolean?  @default(false)
+  posvenda_por_cliente                       Boolean?  @default(false)
+  path_logo_nfs                              String?   @db.VarChar(200)
+  pdv_modo_ficha                             Boolean?  @default(false)
+  logo_expandida_sn                          Boolean?  @default(false)
+  comissao_por_markup                        Boolean?  @default(false)
+  imprime_requisicao_entre_lojas             Boolean?  @default(false)
+  pedir_ddd_cliente                          Boolean?  @default(false)
+  baixar_financeiro_pelo_caixa               Boolean?  @default(false)
+  banco_pix                                  String?   @db.VarChar(120)
+  consulta_pedido_por_numero_comanda         Boolean?  @default(false)
+  hostname_cadastro                          String?   @db.VarChar(30)
+  usuario_cadastro                           String?   @db.VarChar(30)
+  faturamento_por_nota_fiscal                Boolean?  @default(false)
+  perfil_sped_icms                           String?   @db.VarChar(5)
+  contabiliza_troca                          Boolean?  @default(false)
+  cst_reducao_base_calculo                   String?   @db.VarChar(5)
+  gera_titulo_na_venda                       Boolean?  @default(false)
+  isdeleted                                  Boolean?  @default(false)
+  created_at                                 DateTime? @default(now()) @db.Timestamp(6)
+  updated_at                                 DateTime? @default(now()) @db.Timestamp(6)
+  empresa                                    empresa   @relation(fields: [id_empresa], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_empresa], map: "idx_conf_id_empresa")
+  @@index([isdeleted], map: "idx_conf_isdeleted")
+  @@index([uuid], map: "idx_conf_uuid")
+}
+
+model contas_pagar {
+  id                  BigInt                @id @default(autoincrement())
+  uuid                String                @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa          BigInt
+  id_fornecedor       BigInt
+  id_nota_entrada     BigInt?
+  numero_documento    String                @db.VarChar(30)
+  parcela             Int?                  @default(1)
+  valor_original      Decimal               @db.Decimal(18, 2)
+  valor_atual         Decimal               @db.Decimal(18, 2)
+  data_emissao        DateTime              @default(now()) @db.Timestamp(6)
+  data_vencimento     DateTime              @db.Timestamp(6)
+  status              String?               @default("ABERTO") @db.VarChar(20)
+  juros_dia           Decimal?              @db.Decimal(9, 3)
+  multa               Decimal?              @db.Decimal(18, 2)
+  desconto            Decimal?              @db.Decimal(18, 2)
+  isdeleted           Boolean?              @default(false)
+  created_at          DateTime?             @default(now()) @db.Timestamp(6)
+  updated_at          DateTime?             @default(now()) @db.Timestamp(6)
+  empresa             empresa               @relation(fields: [id_empresa], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  fornecedores        fornecedores          @relation(fields: [id_fornecedor], references: [id_fornecedor], onDelete: NoAction, onUpdate: NoAction)
+  notas_entrada       notas_entrada?        @relation(fields: [id_nota_entrada], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  contas_pagar_baixas contas_pagar_baixas[]
+}
+
+model contas_pagar_baixas {
+  id               BigInt            @id @default(autoincrement())
+  uuid             String            @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_conta         BigInt
+  id_forma_pgto    BigInt?
+  id_usuario       BigInt?
+  data_baixa       DateTime          @default(now()) @db.Timestamp(6)
+  valor_pago       Decimal           @db.Decimal(18, 2)
+  juros            Decimal?          @default(0) @db.Decimal(18, 2)
+  multa            Decimal?          @default(0) @db.Decimal(18, 2)
+  desconto         Decimal?          @default(0) @db.Decimal(18, 2)
+  observacao       String?           @db.VarChar(255)
+  created_at       DateTime?         @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?         @default(now()) @db.Timestamp(6)
+  contas_pagar     contas_pagar      @relation(fields: [id_conta], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  formas_pagamento formas_pagamento? @relation(fields: [id_forma_pgto], references: [id_forma], onDelete: NoAction, onUpdate: NoAction)
+  usuarios         usuarios?         @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model contas_pagar_funcionarios {
+  id                           BigInt                        @id @default(autoincrement())
+  uuid                         String                        @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_funcionario               BigInt
+  competencia                  DateTime                      @db.Date
+  id_obrigacao_tipo            BigInt?
+  id_desconto_tipo             BigInt?
+  valor                        Decimal                       @db.Decimal(12, 2)
+  dt_vencimento                DateTime                      @db.Date
+  quitado_sn                   Boolean?                      @default(false)
+  created_at                   DateTime?                     @default(now()) @db.Timestamp(6)
+  updated_at                   DateTime?                     @default(now()) @db.Timestamp(6)
+  descontos_funcionarios_tipo  descontos_funcionarios_tipo?  @relation(fields: [id_desconto_tipo], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  funcionario                  funcionario                   @relation(fields: [id_funcionario], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  obrigacoes_funcionarios_tipo obrigacoes_funcionarios_tipo? @relation(fields: [id_obrigacao_tipo], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  contas_pagas_funcionarios    contas_pagas_funcionarios[]
+
+  @@index([competencia], map: "idx_cpfunc_competencia")
+  @@index([id_funcionario], map: "idx_cpfunc_id_func")
+  @@index([quitado_sn], map: "idx_cpfunc_quitado")
+  @@index([uuid], map: "idx_cpfunc_uuid")
+}
+
+model contas_pagas_funcionarios {
+  id                        BigInt                    @id @default(autoincrement())
+  uuid                      String                    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_conta_pagar_func       BigInt
+  valor_pago                Decimal                   @db.Decimal(12, 2)
+  dt_pagamento              DateTime                  @db.Date
+  forma_pagamento           String?                   @db.VarChar(30)
+  observacao                String?                   @db.VarChar(200)
+  created_at                DateTime?                 @default(now()) @db.Timestamp(6)
+  updated_at                DateTime?                 @default(now()) @db.Timestamp(6)
+  contas_pagar_funcionarios contas_pagar_funcionarios @relation(fields: [id_conta_pagar_func], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_conta_pagar_func], map: "idx_cppfunc_id_conta")
+  @@index([uuid], map: "idx_cppfunc_uuid")
+}
+
+model contas_receber {
+  id                    BigInt                  @id @default(autoincrement())
+  uuid                  String                  @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa            BigInt
+  id_cliente            BigInt
+  id_venda              BigInt?
+  numero_titulo         String                  @db.VarChar(20)
+  parcela               Int                     @default(1)
+  valor_original        Decimal                 @db.Decimal(18, 2)
+  valor_atual           Decimal                 @db.Decimal(18, 2)
+  data_emissao          DateTime                @default(now()) @db.Timestamp(6)
+  data_vencimento       DateTime                @db.Timestamp(6)
+  status                String?                 @default("ABERTO") @db.VarChar(20)
+  nosso_numero          String?                 @db.VarChar(30)
+  observacao            String?                 @db.VarChar(255)
+  juros_dia             Decimal?                @db.Decimal(9, 3)
+  multa                 Decimal?                @db.Decimal(18, 2)
+  desconto              Decimal?                @db.Decimal(18, 2)
+  isdeleted             Boolean?                @default(false)
+  created_at            DateTime?               @default(now()) @db.Timestamp(6)
+  updated_at            DateTime?               @default(now()) @db.Timestamp(6)
+  cliente               cliente                 @relation(fields: [id_cliente], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  empresa               empresa                 @relation(fields: [id_empresa], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendas                vendas?                 @relation(fields: [id_venda], references: [id_venda], onDelete: NoAction, onUpdate: NoAction)
+  contas_receber_baixas contas_receber_baixas[]
+  prorrogacoes          prorrogacoes[]
+  retorno_titulos       retorno_titulos[]
+
+  @@unique([id_empresa, numero_titulo, parcela], map: "uq_contas_receber")
+  @@index([id_empresa], map: "idx_contas_receber_id_empresa")
+  @@index([status], map: "idx_contas_receber_status")
+  @@index([uuid], map: "idx_contas_receber_uuid")
+}
+
+model contas_receber_baixas {
+  id               BigInt            @id @default(autoincrement())
+  uuid             String            @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_titulo        BigInt
+  id_forma_pgto    BigInt?
+  id_usuario       BigInt?
+  data_baixa       DateTime          @default(now()) @db.Timestamp(6)
+  valor_pago       Decimal           @db.Decimal(18, 2)
+  juros            Decimal?          @default(0) @db.Decimal(18, 2)
+  multa            Decimal?          @default(0) @db.Decimal(18, 2)
+  desconto         Decimal?          @default(0) @db.Decimal(18, 2)
+  observacao       String?           @db.VarChar(255)
+  created_at       DateTime?         @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?         @default(now()) @db.Timestamp(6)
+  formas_pagamento formas_pagamento? @relation(fields: [id_forma_pgto], references: [id_forma], onDelete: NoAction, onUpdate: NoAction)
+  contas_receber   contas_receber    @relation(fields: [id_titulo], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuarios         usuarios?         @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_titulo], map: "idx_cr_baixas_id_titulo")
+  @@index([uuid], map: "idx_cr_baixas_uuid")
+}
+
+model contato_funcionario {
+  id             BigInt      @id @default(autoincrement())
+  uuid           String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_funcionario BigInt
+  tipo           String      @db.VarChar(30)
+  valor          String      @db.VarChar(120)
+  observacao     String?     @db.VarChar(120)
+  created_at     DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at     DateTime?   @default(now()) @db.Timestamp(6)
+  funcionario    funcionario @relation(fields: [id_funcionario], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_funcionario], map: "idx_cont_func_func")
+  @@index([uuid], map: "idx_cont_func_uuid")
+}
+
+model cst {
+  id_cst           BigInt             @id @default(autoincrement())
+  uuid             String             @unique(map: "idx_cst_uuid") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cod_cst          String             @unique @db.Char(5)
+  descricao        String?            @db.VarChar(100)
+  txt_l1           String?            @db.VarChar(100)
+  txt_l2           String?            @db.VarChar(100)
+  paga_imposto     Boolean?           @default(false)
+  icms_l           Decimal?           @db.Decimal(18, 2)
+  icms_f           Decimal?           @db.Decimal(18, 2)
+  cod_ecf          String?            @db.VarChar(5)
+  perc_subst       Decimal?           @db.Decimal(9, 2)
+  cfop_int         String?            @db.VarChar(5)
+  cfop_ext         String?            @db.VarChar(5)
+  reduz_bc         Boolean?           @default(false)
+  dt_alteracao     DateTime?          @db.Timestamp(6)
+  tributacao_itens tributacao_itens[]
+}
+
+model custos_producao_eqp {
+  id_eqp          BigInt          @id @default(autoincrement())
+  uuid            String          @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_ordem        BigInt
+  equipamento     String?         @db.VarChar(100)
+  horas           Decimal         @db.Decimal(9, 2)
+  custo_hora      Decimal         @db.Decimal(18, 2)
+  custo_total     Decimal?        @default(dbgenerated("(horas * custo_hora)")) @db.Decimal(18, 2)
+  created_at      DateTime?       @default(now()) @db.Timestamp(6)
+  ordens_producao ordens_producao @relation(fields: [id_ordem], references: [id_ordem], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model custos_producao_hh {
+  id_hh           BigInt          @id @default(autoincrement())
+  uuid            String          @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_ordem        BigInt
+  funcionario     String?         @db.VarChar(100)
+  horas           Decimal         @db.Decimal(9, 2)
+  custo_hora      Decimal         @db.Decimal(18, 2)
+  custo_total     Decimal?        @default(dbgenerated("(horas * custo_hora)")) @db.Decimal(18, 2)
+  created_at      DateTime?       @default(now()) @db.Timestamp(6)
+  ordens_producao ordens_producao @relation(fields: [id_ordem], references: [id_ordem], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model descontos_funcionarios_tipo {
+  id                        BigInt                      @id @default(autoincrement())
+  uuid                      String                      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  descricao                 String                      @db.VarChar(100)
+  ativo_sn                  Boolean?                    @default(true)
+  created_at                DateTime?                   @default(now()) @db.Timestamp(6)
+  updated_at                DateTime?                   @default(now()) @db.Timestamp(6)
+  contas_pagar_funcionarios contas_pagar_funcionarios[]
+
+  @@index([ativo_sn], map: "idx_descontos_tipo_ativo")
+  @@index([uuid], map: "idx_descontos_tipo_uuid")
+}
+
+model empresa {
+  id                   BigInt                 @id @default(autoincrement())
+  uuid                 String                 @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  razao_social         String                 @db.VarChar(120)
+  nome_fantasia        String?                @db.VarChar(120)
+  nome_curto           String?                @db.VarChar(60)
+  cnpj                 String                 @unique @db.Char(14)
+  inscricao_estadual   String?                @db.VarChar(15)
+  inscricao_municipal  String?                @db.VarChar(15)
+  suframa              String?                @db.VarChar(15)
+  logradouro           String?                @db.VarChar(120)
+  numero               String?                @db.VarChar(10)
+  bairro               String?                @db.VarChar(60)
+  id_cidade            BigInt?
+  complemento          String?                @db.VarChar(60)
+  telefone             String?                @db.VarChar(15)
+  celular              String?                @db.VarChar(15)
+  whatsapp             String?                @db.VarChar(15)
+  email                String?                @db.VarChar(100)
+  site                 String?                @db.VarChar(120)
+  responsavel          String?                @db.VarChar(100)
+  isdeleted            Boolean?               @default(false)
+  created_at           DateTime?              @default(now()) @db.Timestamp(6)
+  updated_at           DateTime?              @default(now()) @db.Timestamp(6)
+  caixa_aberturas      caixa_aberturas[]
+  cargo                cargo[]
+  cliente              cliente[]
+  comandas             comandas[]
+  configuracao_empresa configuracao_empresa[]
+  contas_pagar         contas_pagar[]
+  contas_receber       contas_receber[]
+  cidade               cidade?                @relation(fields: [id_cidade], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  fornecedores         fornecedores[]
+  funcionario          funcionario[]
+  impressora           impressora[]
+  itens                itens[]
+  itens_bom            itens_bom[]
+  lotes                lotes[]
+  lotes_cobranca       lotes_cobranca[]
+  motoristas           motoristas[]
+  movimento_financeiro movimento_financeiro[]
+  movimentos_estoque   movimentos_estoque[]
+  notas_entrada        notas_entrada[]
+  notas_fiscais        notas_fiscais[]
+  numeracao_fiscais    numeracao_fiscais[]
+  ordens_producao      ordens_producao[]
+  pedidos_compra       pedidos_compra[]
+  plano_contas         plano_contas[]
+  requisicoes_compra   requisicoes_compra[]
+  requisicoes_estoque  requisicoes_estoque[]
+  retornos_bancarios   retornos_bancarios[]
+  saldos_itens         saldos_itens[]
+  usuarios             usuarios[]
+  veiculos             veiculos[]
+  vendas               vendas[]
+  vendedores           vendedores[]
+
+  @@index([cnpj], map: "idx_empresa_cnpj")
+  @@index([id_cidade], map: "idx_empresa_id_cidade")
+  @@index([isdeleted], map: "idx_empresa_isdeleted")
+  @@index([nome_fantasia], map: "idx_empresa_nome")
+  @@index([razao_social], map: "idx_empresa_razao")
+  @@index([uuid], map: "idx_empresa_uuid")
+}
+
+model endereco_funcionario {
+  id             BigInt      @id @default(autoincrement())
+  uuid           String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_funcionario BigInt
+  tipo           String      @db.VarChar(30)
+  logradouro     String      @db.VarChar(120)
+  numero         String?     @db.VarChar(20)
+  complemento    String?     @db.VarChar(60)
+  bairro         String?     @db.VarChar(60)
+  cidade         String      @db.VarChar(60)
+  estado         String      @db.Char(2)
+  cep            String?     @db.VarChar(12)
+  created_at     DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at     DateTime?   @default(now()) @db.Timestamp(6)
+  funcionario    funcionario @relation(fields: [id_funcionario], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_funcionario], map: "idx_end_func_func")
+  @@index([uuid], map: "idx_end_func_uuid")
+}
+
+model entregas {
+  id_entrega    BigInt      @id @default(autoincrement())
+  id_venda      BigInt
+  id_motorista  BigInt?
+  tipo_frete    String?     @db.VarChar(5)
+  valor_frete   Decimal?    @db.Decimal(18, 2)
+  volumes       Int?
+  peso_total    Decimal?    @db.Decimal(18, 2)
+  data_saida    DateTime?   @db.Timestamp(6)
+  hora_saida    String?     @db.VarChar(10)
+  local_entrega String?     @db.VarChar(100)
+  motoristas    motoristas? @relation(fields: [id_motorista], references: [id_motorista], onDelete: NoAction, onUpdate: NoAction)
+  vendas        vendas      @relation(fields: [id_venda], references: [id_venda], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model equipamento {
+  id                     BigInt                   @id @default(autoincrement())
+  uuid                   String                   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_cliente             BigInt
+  id_modelo              BigInt?
+  descricao              String                   @db.VarChar(150)
+  acessorio              String?                  @db.VarChar(100)
+  codigo_fab             String?                  @db.VarChar(30)
+  numero_serial          String?                  @db.VarChar(50)
+  data_instalacao        DateTime?                @db.Date
+  observacao             String?
+  ativo_sn               Boolean?                 @default(true)
+  isdeleted              Boolean?                 @default(false)
+  created_at             DateTime?                @default(now()) @db.Timestamp(6)
+  updated_at             DateTime?                @default(now()) @db.Timestamp(6)
+  cliente                cliente                  @relation(fields: [id_cliente], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  modelo                 modelo?                  @relation(fields: [id_modelo], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  equipamento_contato    equipamento_contato[]
+  equipamento_endereco   equipamento_endereco[]
+  equipamento_manutencao equipamento_manutencao[]
+}
+
+model equipamento_contato {
+  id             BigInt      @id @default(autoincrement())
+  uuid           String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_equipamento BigInt
+  tipo           String?     @db.VarChar(30)
+  valor          String?     @db.VarChar(100)
+  observacao     String?     @db.VarChar(100)
+  created_at     DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at     DateTime?   @default(now()) @db.Timestamp(6)
+  equipamento    equipamento @relation(fields: [id_equipamento], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model equipamento_endereco {
+  id               BigInt      @id @default(autoincrement())
+  uuid             String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_equipamento   BigInt
+  logradouro       String?     @db.VarChar(120)
+  numero           String?     @db.VarChar(20)
+  complemento      String?     @db.VarChar(60)
+  bairro           String?     @db.VarChar(60)
+  cep              String?     @db.VarChar(12)
+  cidade           String?     @db.VarChar(60)
+  estado           String?     @db.Char(2)
+  zona             String?     @db.VarChar(30)
+  ponto_referencia String?     @db.VarChar(120)
+  local_instalado  String?     @db.VarChar(120)
+  created_at       DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?   @default(now()) @db.Timestamp(6)
+  equipamento      equipamento @relation(fields: [id_equipamento], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model equipamento_manutencao {
+  id               BigInt      @id @default(autoincrement())
+  uuid             String      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_equipamento   BigInt
+  tipo             String      @db.VarChar(30)
+  periodo          String?     @db.VarChar(20)
+  ultima_execucao  DateTime?   @db.Date
+  proxima_execucao DateTime?   @db.Date
+  observacao       String?
+  created_at       DateTime?   @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?   @default(now()) @db.Timestamp(6)
+  equipamento      equipamento @relation(fields: [id_equipamento], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model estado {
+  id          BigInt   @id @default(autoincrement())
+  uuid        String   @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome        String   @db.VarChar(60)
+  uf          String   @db.Char(2)
+  codigo_ibge String?  @unique @db.VarChar(10)
+  cidade      cidade[]
+
+  @@index([nome], map: "idx_estado_nome")
+  @@index([uf], map: "idx_estado_uf")
+}
+
+model familias {
+  id_familia     BigInt    @id @default(autoincrement())
+  uuid           String    @unique(map: "idx_familias_uuid") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_subgrupo    BigInt
+  descricao      String    @db.VarChar(100)
+  identificador  String?   @db.VarChar(10)
+  status         String?   @db.VarChar(10)
+  data_alteracao DateTime? @db.Timestamp(6)
+  subgrupos      subgrupos @relation(fields: [id_subgrupo], references: [id_subgrupo], onDelete: Cascade, onUpdate: NoAction)
+  itens          itens[]
+
+  @@index([id_subgrupo], map: "idx_familias_subgrupo")
+}
+
+model formas_pagamento {
+  id_forma                  BigInt                      @id @default(autoincrement())
+  uuid                      String                      @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  descricao                 String                      @db.VarChar(100)
+  id_tipo                   BigInt
+  ativo                     Boolean?                    @default(true)
+  isdeleted                 Boolean?                    @default(false)
+  created_at                DateTime?                   @default(now()) @db.Timestamp(6)
+  updated_at                DateTime?                   @default(now()) @db.Timestamp(6)
+  caixa_pagamentos          caixa_pagamentos[]
+  contas_pagar_baixas       contas_pagar_baixas[]
+  contas_receber_baixas     contas_receber_baixas[]
+  tipos_pagamento           tipos_pagamento             @relation(fields: [id_tipo], references: [id_tipo], onDelete: NoAction, onUpdate: NoAction)
+  formas_pagamento_parcelas formas_pagamento_parcelas[]
+  venda_pagamentos          venda_pagamentos[]
+
+  @@unique([descricao, id_tipo], map: "uq_forma_pagamento")
+}
+
+model formas_pagamento_parcelas {
+  id_parcela       BigInt           @id @default(autoincrement())
+  id_forma         BigInt
+  ordem            Int
+  dias             Int
+  percentual       Decimal          @db.Decimal(9, 2)
+  acrescimo        Decimal?         @default(0) @db.Decimal(9, 2)
+  formas_pagamento formas_pagamento @relation(fields: [id_forma], references: [id_forma], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([id_forma, ordem], map: "uq_forma_ordem")
+}
+
+model fornecedores {
+  id_fornecedor  BigInt           @id @default(autoincrement())
+  uuid           String           @unique(map: "idx_fornecedores_uuid") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa     BigInt
+  nome           String           @db.VarChar(120)
+  fantasia       String?          @db.VarChar(60)
+  endereco       String?          @db.VarChar(120)
+  numero         String?          @db.VarChar(10)
+  complemento    String?          @db.VarChar(60)
+  bairro         String?          @db.VarChar(60)
+  cep            String?          @db.VarChar(10)
+  cidade         String?          @db.VarChar(60)
+  uf             String?          @db.Char(2)
+  telefone       String?          @db.VarChar(20)
+  email          String?          @db.VarChar(100)
+  cnpj_cpf       String?          @db.VarChar(18)
+  inscricao_est  String?          @db.VarChar(18)
+  inscricao_mun  String?          @db.VarChar(15)
+  contato        String?          @db.VarChar(60)
+  ativo          Boolean?         @default(true)
+  data_cadastro  DateTime?        @default(now()) @db.Timestamp(6)
+  isdeleted      Boolean?         @default(false)
+  contas_pagar   contas_pagar[]
+  empresa        empresa          @relation(fields: [id_empresa], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  itens          itens[]
+  notas_entrada  notas_entrada[]
+  pedidos_compra pedidos_compra[]
+
+  @@index([id_empresa], map: "idx_fornecedores_empresa")
+}
+
+model fotos_itens {
+  id_foto   BigInt   @id @default(autoincrement())
+  uuid      String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_item   BigInt
+  url       String   @db.VarChar(255)
+  ordem     Int?     @default(1) @db.SmallInt
+  isdeleted Boolean? @default(false)
+  itens     itens    @relation(fields: [id_item], references: [id_item], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_item], map: "idx_fotos_item")
+}
+
+model funcionario {
+  id                        BigInt                      @id @default(autoincrement())
+  uuid                      String                      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa                BigInt
+  nome                      String                      @db.VarChar(120)
+  cpf                       String                      @db.VarChar(20)
+  rg                        String?                     @db.VarChar(20)
+  dt_nascimento             DateTime?                   @db.Date
+  email                     String?                     @db.VarChar(100)
+  telefone                  String?                     @db.VarChar(20)
+  celular                   String?                     @db.VarChar(20)
+  id_cargo                  BigInt?
+  dt_admissao               DateTime                    @db.Date
+  dt_demissao               DateTime?                   @db.Date
+  ativo_sn                  Boolean?                    @default(true)
+  isdeleted                 Boolean?                    @default(false)
+  created_at                DateTime?                   @default(now()) @db.Timestamp(6)
+  updated_at                DateTime?                   @default(now()) @db.Timestamp(6)
+  contas_pagar_funcionarios contas_pagar_funcionarios[]
+  contato_funcionario       contato_funcionario[]
+  endereco_funcionario      endereco_funcionario[]
+  cargo                     cargo?                      @relation(fields: [id_cargo], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  empresa                   empresa                     @relation(fields: [id_empresa], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_empresa], map: "idx_func_id_empresa")
+  @@index([isdeleted], map: "idx_func_isdeleted")
+  @@index([nome], map: "idx_func_nome")
+  @@index([uuid], map: "idx_func_uuid")
+}
+
+model grupos {
+  id_grupo       BigInt      @id @default(autoincrement())
+  uuid           String      @unique(map: "idx_grupos_uuid") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  descricao      String      @db.VarChar(60)
+  perc_comissao  Decimal?    @db.Decimal(9, 2)
+  ativo          Boolean?    @default(true)
+  aliq_icms      Decimal?    @db.Decimal(9, 2)
+  reducao_icms   Decimal?    @db.Decimal(9, 2)
+  comissao_linha Decimal?    @db.Decimal(9, 2)
+  data_alteracao DateTime?   @db.Timestamp(6)
+  itens          itens[]
+  subgrupos      subgrupos[]
+}
+
+model impressora {
+  id              BigInt    @id @default(autoincrement())
+  uuid            String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome            String    @db.VarChar(120)
+  endereco_rede   String    @db.VarChar(120)
+  id_empresa      BigInt
+  tipo_impressora String    @db.VarChar(30)
+  colunas         Int?      @db.SmallInt
+  isdeleted       Boolean?  @default(false)
+  created_at      DateTime? @default(now()) @db.Timestamp(6)
+  updated_at      DateTime? @default(now()) @db.Timestamp(6)
+  empresa         empresa   @relation(fields: [id_empresa], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_empresa], map: "idx_impressora_id_empresa")
+  @@index([isdeleted], map: "idx_impressora_isdeleted")
+  @@index([nome], map: "idx_impressora_nome")
+  @@index([uuid], map: "idx_impressora_uuid")
+}
+
+model itens {
+  id_item                                 BigInt                      @id @default(autoincrement())
+  uuid                                    String                      @unique(map: "idx_itens_uuid") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa                              BigInt
+  id_fornecedor                           BigInt?
+  id_grupo                                BigInt?
+  id_subgrupo                             BigInt?
+  id_familia                              BigInt?
+  descricao                               String                      @db.VarChar(120)
+  descricao_fat                           String?                     @db.VarChar(255)
+  unidade_venda                           String                      @db.VarChar(5)
+  marca                                   String?                     @db.VarChar(50)
+  qtde_embalagem                          Decimal?                    @default(0) @db.Decimal(18, 4)
+  peso_bruto                              Decimal?                    @default(0) @db.Decimal(18, 4)
+  peso_liquido                            Decimal?                    @default(0) @db.Decimal(18, 4)
+  ativo                                   Boolean?                    @default(true)
+  permite_negativo                        Boolean?                    @default(false)
+  aceita_desconto                         Boolean?                    @default(true)
+  servico                                 Boolean?                    @default(false)
+  data_cadastro                           DateTime?                   @default(now()) @db.Timestamp(6)
+  usuario_cadastro                        String?                     @db.VarChar(50)
+  isdeleted                               Boolean?                    @default(false)
+  id_unidade                              BigInt?
+  codigos_barras                          codigos_barras[]
+  comandas_itens                          comandas_itens[]
+  fotos_itens                             fotos_itens[]
+  empresa                                 empresa                     @relation(fields: [id_empresa], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  familias                                familias?                   @relation(fields: [id_familia], references: [id_familia], onDelete: NoAction, onUpdate: NoAction)
+  fornecedores                            fornecedores?               @relation(fields: [id_fornecedor], references: [id_fornecedor], onDelete: NoAction, onUpdate: NoAction)
+  grupos                                  grupos?                     @relation(fields: [id_grupo], references: [id_grupo], onDelete: NoAction, onUpdate: NoAction)
+  subgrupos                               subgrupos?                  @relation(fields: [id_subgrupo], references: [id_subgrupo], onDelete: NoAction, onUpdate: NoAction)
+  unidades_medida                         unidades_medida?            @relation(fields: [id_unidade], references: [id_unidade], onDelete: NoAction, onUpdate: NoAction)
+  itens_bom_itens_bom_id_item_compToitens itens_bom[]                 @relation("itens_bom_id_item_compToitens")
+  itens_bom_itens_bom_id_item_paiToitens  itens_bom[]                 @relation("itens_bom_id_item_paiToitens")
+  lotes                                   lotes[]
+  movimentos_estoque                      movimentos_estoque[]
+  nota_entrada_itens                      nota_entrada_itens[]
+  notas_fiscais_itens                     notas_fiscais_itens[]
+  observacoes_itens                       observacoes_itens[]
+  ordens_producao                         ordens_producao[]
+  ordens_producao_itens                   ordens_producao_itens[]
+  pedido_itens                            pedido_itens[]
+  precos_itens                            precos_itens[]
+  promocoes_itens                         promocoes_itens[]
+  requisicao_itens                        requisicao_itens[]
+  requisicoes_estoque_itens               requisicoes_estoque_itens[]
+  saldos_itens                            saldos_itens[]
+  tributacao_itens                        tributacao_itens[]
+  venda_itens                             venda_itens[]
+
+  @@index([descricao], map: "idx_itens_descricao")
+  @@index([id_empresa], map: "idx_itens_empresa")
+}
+
+model itens_bom {
+  id_bom                                                     BigInt           @id @default(autoincrement())
+  uuid                                                       String           @unique(map: "idx_itens_bom_uuid") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa                                                 BigInt
+  id_item_pai                                                BigInt
+  id_item_comp                                               BigInt
+  qtd_por_un                                                 Decimal          @db.Decimal(18, 6)
+  und_pai                                                    String?          @db.VarChar(5)
+  und_comp                                                   String?          @db.VarChar(5)
+  ativo                                                      Boolean?         @default(true)
+  isdeleted                                                  Boolean?         @default(false)
+  created_at                                                 DateTime?        @default(now()) @db.Timestamp(6)
+  updated_at                                                 DateTime?        @default(now()) @db.Timestamp(6)
+  id_unidade_pai                                             BigInt?
+  id_unidade_comp                                            BigInt?
+  unidades_medida_itens_bom_id_unidade_compTounidades_medida unidades_medida? @relation("itens_bom_id_unidade_compTounidades_medida", fields: [id_unidade_comp], references: [id_unidade], onDelete: NoAction, onUpdate: NoAction, map: "bom_unidade_comp_fkey")
+  unidades_medida_itens_bom_id_unidade_paiTounidades_medida  unidades_medida? @relation("itens_bom_id_unidade_paiTounidades_medida", fields: [id_unidade_pai], references: [id_unidade], onDelete: NoAction, onUpdate: NoAction, map: "bom_unidade_pai_fkey")
+  empresa                                                    empresa          @relation(fields: [id_empresa], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  itens_itens_bom_id_item_compToitens                        itens            @relation("itens_bom_id_item_compToitens", fields: [id_item_comp], references: [id_item], onDelete: NoAction, onUpdate: NoAction)
+  itens_itens_bom_id_item_paiToitens                         itens            @relation("itens_bom_id_item_paiToitens", fields: [id_item_pai], references: [id_item], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([id_empresa, id_item_pai, id_item_comp], map: "uq_bom_componente")
+  @@index([id_item_comp], map: "idx_bom_comp")
+  @@index([id_item_pai], map: "idx_bom_pai")
+}
+
+model lotes {
+  id_lote            BigInt               @id @default(autoincrement())
+  uuid               String               @unique(map: "idx_lotes_uuid") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa         BigInt
+  id_item            BigInt
+  numero             String               @db.VarChar(50)
+  data_fabricacao    DateTime?            @db.Timestamp(6)
+  data_validade      DateTime?            @db.Timestamp(6)
+  quantidade_inicial Decimal?             @db.Decimal(18, 4)
+  quantidade_atual   Decimal?             @db.Decimal(18, 4)
+  status             String?              @default("ATIVO") @db.VarChar(20)
+  isdeleted          Boolean?             @default(false)
+  created_at         DateTime?            @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?            @default(now()) @db.Timestamp(6)
+  custo_materia      Decimal?             @default(0) @db.Decimal(18, 2)
+  custo_hh           Decimal?             @default(0) @db.Decimal(18, 2)
+  custo_eqp          Decimal?             @default(0) @db.Decimal(18, 2)
+  custo_outros       Decimal?             @default(0) @db.Decimal(18, 2)
+  custo_total        Decimal?             @default(dbgenerated("(((custo_materia + custo_hh) + custo_eqp) + custo_outros)")) @db.Decimal(18, 2)
+  custo_unitario     Decimal?             @default(dbgenerated("\nCASE\n    WHEN (quantidade_inicial > (0)::numeric) THEN ((((custo_materia + custo_hh) + custo_eqp) + custo_outros) / quantidade_inicial)\n    ELSE (0)::numeric\nEND")) @db.Decimal(18, 6)
+  empresa            empresa              @relation(fields: [id_empresa], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  itens              itens                @relation(fields: [id_item], references: [id_item], onDelete: NoAction, onUpdate: NoAction)
+  movimentos_estoque movimentos_estoque[]
+
+  @@unique([id_empresa, id_item, numero], map: "uq_lote_empresa_item_num")
+  @@index([id_item], map: "idx_lotes_item")
+}
+
+model lotes_cobranca {
+  id           BigInt    @id @default(autoincrement())
+  uuid         String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa   BigInt
+  data_geracao DateTime  @default(now()) @db.Timestamp(6)
+  data_envio   DateTime? @db.Timestamp(6)
+  status       String?   @default("GERADO") @db.VarChar(20)
+  qtd_titulos  Int?
+  valor_total  Decimal?  @db.Decimal(18, 2)
+  id_usuario   BigInt?
+  created_at   DateTime? @default(now()) @db.Timestamp(6)
+  updated_at   DateTime? @default(now()) @db.Timestamp(6)
+  empresa      empresa   @relation(fields: [id_empresa], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuarios     usuarios? @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model marca {
+  id         BigInt    @id @default(autoincrement())
+  uuid       String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nome       String    @db.VarChar(100)
+  ativo_sn   Boolean?  @default(true)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+  modelo     modelo[]
+}
+
+model modelo {
+  id          BigInt        @id @default(autoincrement())
+  uuid        String        @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_marca    BigInt
+  nome        String        @db.VarChar(100)
+  potencia    String?       @db.VarChar(50)
+  ativo_sn    Boolean?      @default(true)
+  created_at  DateTime?     @default(now()) @db.Timestamp(6)
+  updated_at  DateTime?     @default(now()) @db.Timestamp(6)
+  equipamento equipamento[]
+  marca       marca         @relation(fields: [id_marca], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model motoristas {
+  id_motorista             BigInt                     @id @default(autoincrement())
+  uuid                     String                     @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa               BigInt
+  nome                     String                     @db.VarChar(100)
+  cpf                      String?                    @unique @db.VarChar(14)
+  cnh                      String?                    @db.VarChar(20)
+  categoria_cnh            String?                    @db.VarChar(5)
+  validade_cnh             DateTime?                  @db.Date
+  telefone                 String?                    @db.VarChar(20)
+  ativo                    Boolean?                   @default(true)
+  created_at               DateTime?                  @default(now()) @db.Timestamp(6)
+  updated_at               DateTime?                  @default(now()) @db.Timestamp(6)
+  isdeleted                Boolean?                   @default(false)
+  comandas                 comandas[]
+  entregas                 entregas[]
+  empresa                  empresa                    @relation(fields: [id_empresa], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  notas_fiscais_transporte notas_fiscais_transporte[]
+}
+
+model movimento_financeiro {
+  id           BigInt       @id @default(autoincrement())
+  uuid         String       @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa   BigInt
+  id_plano     BigInt
+  origem       String       @db.VarChar(30)
+  id_origem    BigInt?
+  tipo         String       @db.VarChar(1)
+  data_mov     DateTime     @default(now()) @db.Timestamp(6)
+  valor        Decimal      @db.Decimal(18, 2)
+  historico    String?      @db.VarChar(255)
+  documento    String?      @db.VarChar(50)
+  forma_pagto  String?      @db.VarChar(20)
+  conciliado   Boolean?     @default(false)
+  isdeleted    Boolean?     @default(false)
+  created_at   DateTime?    @default(now()) @db.Timestamp(6)
+  updated_at   DateTime?    @default(now()) @db.Timestamp(6)
+  empresa      empresa      @relation(fields: [id_empresa], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  plano_contas plano_contas @relation(fields: [id_plano], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([data_mov], map: "idx_mov_fin_data")
+  @@index([id_plano], map: "idx_mov_fin_plano")
+  @@index([tipo], map: "idx_mov_fin_tipo")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model movimentos_estoque {
+  id_mov          BigInt           @id @default(autoincrement())
+  uuid            String           @unique(map: "idx_movimentos_estoque_uuid") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa      BigInt
+  id_item         BigInt
+  data_mov        DateTime?        @default(now()) @db.Timestamp(6)
+  st              String           @default("E") @db.Char(1)        // S ou E
+  tipo            String           @db.VarChar(20)                  // compra, devolucao, venda etc.
+  preco_compra    Decimal?         @default(0) @db.Decimal(18, 4)
+  preco_venda     Decimal?         @default(0) @db.Decimal(18, 4)
+  quantidade      Decimal          @db.Decimal(18, 4)
+  custo_unit      Decimal?         @db.Decimal(18, 4)
+  custo_total     Decimal?         @db.Decimal(18, 4)
+  id_ordem        BigInt?
+  numdoc          String?          @db.VarChar(30)
+  observacoes     String?
+  isdeleted       Boolean?         @default(false)
+  created_at      DateTime?        @default(now()) @db.Timestamp(6)
+  updated_at      DateTime?        @default(now()) @db.Timestamp(6)
+  id_lote         BigInt?
+  empresa         empresa          @relation(fields: [id_empresa], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  itens           itens            @relation(fields: [id_item], references: [id_item], onDelete: NoAction, onUpdate: NoAction)
+  lotes           lotes?           @relation(fields: [id_lote], references: [id_lote], onDelete: NoAction, onUpdate: NoAction)
+  ordens_producao ordens_producao? @relation(fields: [id_ordem], references: [id_ordem], onUpdate: NoAction)
+
+  @@index([id_empresa, id_item], map: "idx_mov_emp_item")
+  @@index([id_ordem], map: "idx_mov_ordem")
+  @@index([tipo], map: "idx_mov_tipo")
+}
+
+model nota_entrada_itens {
+  id             BigInt        @id @default(autoincrement())
+  uuid           String        @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_nota        BigInt
+  id_item        BigInt
+  quantidade     Decimal       @db.Decimal(18, 4)
+  preco_unitario Decimal       @db.Decimal(18, 4)
+  unidade        String?       @db.VarChar(10)
+  valor_total    Decimal?      @db.Decimal(18, 4)
+  cfop           String?       @db.VarChar(5)
+  ncm            String?       @db.VarChar(10)
+  cst            String?       @db.VarChar(5)
+  aliquota_icms  Decimal?      @db.Decimal(5, 2)
+  created_at     DateTime?     @default(now()) @db.Timestamp(6)
+  updated_at     DateTime?     @default(now()) @db.Timestamp(6)
+  itens          itens         @relation(fields: [id_item], references: [id_item], onDelete: NoAction, onUpdate: NoAction)
+  notas_entrada  notas_entrada @relation(fields: [id_nota], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model notas_entrada {
+  id                 BigInt               @id @default(autoincrement())
+  uuid               String               @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa         BigInt
+  id_fornecedor      BigInt
+  id_pedido          BigInt?
+  numero             String               @db.VarChar(20)
+  serie              String               @db.VarChar(5)
+  modelo             String?              @db.VarChar(5)
+  chave_acesso       String?              @unique @db.VarChar(44)
+  data_emissao       DateTime?            @db.Timestamp(6)
+  data_entrada       DateTime?            @default(now()) @db.Timestamp(6)
+  valor_produtos     Decimal?             @db.Decimal(18, 2)
+  valor_frete        Decimal?             @db.Decimal(18, 2)
+  valor_seguro       Decimal?             @db.Decimal(18, 2)
+  valor_despesas     Decimal?             @db.Decimal(18, 2)
+  valor_ipi          Decimal?             @db.Decimal(18, 2)
+  valor_icms         Decimal?             @db.Decimal(18, 2)
+  valor_total        Decimal?             @db.Decimal(18, 2)
+  status             String?              @default("REGISTRADA") @db.VarChar(20)
+  isdeleted          Boolean?             @default(false)
+  created_at         DateTime?            @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?            @default(now()) @db.Timestamp(6)
+  contas_pagar       contas_pagar[]
+  nota_entrada_itens nota_entrada_itens[]
+  empresa            empresa              @relation(fields: [id_empresa], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  fornecedores       fornecedores         @relation(fields: [id_fornecedor], references: [id_fornecedor], onDelete: NoAction, onUpdate: NoAction)
+  pedidos_compra     pedidos_compra?      @relation(fields: [id_pedido], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([id_empresa, numero, serie], map: "uq_nota_entrada")
+}
+
+model notas_fiscais {
+  id_nf                    BigInt                     @id @default(autoincrement())
+  uuid                     String                     @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa               BigInt
+  numero                   Int
+  serie                    String                     @db.VarChar(5)
+  modelo                   String                     @db.VarChar(3)
+  tipo_nf                  String                     @db.VarChar(3)
+  id_venda                 BigInt?
+  id_cliente               BigInt?
+  cfop                     String?                    @db.VarChar(5)
+  emissao                  DateTime?                  @db.Timestamp(6)
+  saida                    DateTime?                  @db.Timestamp(6)
+  status                   String?                    @default("EM_DIGITACAO") @db.VarChar(20)
+  protocolo                String?                    @db.VarChar(30)
+  recibo                   String?                    @db.VarChar(30)
+  chave_acesso             String?                    @db.VarChar(44)
+  motivo_cancelamento      String?                    @db.VarChar(255)
+  created_at               DateTime?                  @default(now()) @db.Timestamp(6)
+  updated_at               DateTime?                  @default(now()) @db.Timestamp(6)
+  cliente                  cliente?                   @relation(fields: [id_cliente], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  empresa                  empresa                    @relation(fields: [id_empresa], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vendas                   vendas?                    @relation(fields: [id_venda], references: [id_venda], onDelete: NoAction, onUpdate: NoAction)
+  notas_fiscais_eventos    notas_fiscais_eventos[]
+  notas_fiscais_itens      notas_fiscais_itens[]
+  notas_fiscais_totais     notas_fiscais_totais[]
+  notas_fiscais_transporte notas_fiscais_transporte[]
+
+  @@unique([id_empresa, numero, serie, modelo])
+}
+
+model notas_fiscais_eventos {
+  id_nf_evento  BigInt        @id @default(autoincrement())
+  id_nf         BigInt
+  tipo_evento   String?       @db.VarChar(30)
+  descricao     String?       @db.VarChar(255)
+  usuario       String?       @db.VarChar(50)
+  data_evento   DateTime?     @default(now()) @db.Timestamp(6)
+  notas_fiscais notas_fiscais @relation(fields: [id_nf], references: [id_nf], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model notas_fiscais_itens {
+  id_nf_item                   BigInt                         @id @default(autoincrement())
+  id_nf                        BigInt
+  id_item                      BigInt
+  descricao                    String?                        @db.VarChar(255)
+  unidade                      String?                        @db.VarChar(10)
+  quantidade                   Decimal                        @db.Decimal(18, 4)
+  preco_unitario               Decimal                        @db.Decimal(18, 4)
+  valor_total                  Decimal                        @db.Decimal(18, 2)
+  cfop                         String?                        @db.VarChar(5)
+  ncm                          String?                        @db.VarChar(10)
+  cst                          String?                        @db.VarChar(5)
+  created_at                   DateTime?                      @default(now()) @db.Timestamp(6)
+  itens                        itens                          @relation(fields: [id_item], references: [id_item], onDelete: NoAction, onUpdate: NoAction)
+  notas_fiscais                notas_fiscais                  @relation(fields: [id_nf], references: [id_nf], onDelete: Cascade, onUpdate: NoAction)
+  notas_fiscais_itens_tributos notas_fiscais_itens_tributos[]
+}
+
+model notas_fiscais_itens_tributos {
+  id_item_tributo     BigInt              @id @default(autoincrement())
+  id_nf_item          BigInt
+  base_icms           Decimal?            @db.Decimal(18, 2)
+  valor_icms          Decimal?            @db.Decimal(18, 2)
+  base_st             Decimal?            @db.Decimal(18, 2)
+  valor_st            Decimal?            @db.Decimal(18, 2)
+  aliquota_icms       Decimal?            @db.Decimal(5, 2)
+  valor_ipi           Decimal?            @db.Decimal(18, 2)
+  aliquota_ipi        Decimal?            @db.Decimal(5, 2)
+  valor_pis           Decimal?            @db.Decimal(18, 2)
+  aliquota_pis        Decimal?            @db.Decimal(5, 2)
+  valor_cofins        Decimal?            @db.Decimal(18, 2)
+  aliquota_cofins     Decimal?            @db.Decimal(5, 2)
+  notas_fiscais_itens notas_fiscais_itens @relation(fields: [id_nf_item], references: [id_nf_item], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model notas_fiscais_totais {
+  id_nf_total     BigInt        @id @default(autoincrement())
+  id_nf           BigInt
+  base_icms       Decimal?      @db.Decimal(18, 2)
+  valor_icms      Decimal?      @db.Decimal(18, 2)
+  base_st         Decimal?      @db.Decimal(18, 2)
+  valor_st        Decimal?      @db.Decimal(18, 2)
+  valor_produtos  Decimal?      @db.Decimal(18, 2)
+  valor_frete     Decimal?      @db.Decimal(18, 2)
+  valor_seguro    Decimal?      @db.Decimal(18, 2)
+  outras_despesas Decimal?      @db.Decimal(18, 2)
+  valor_ipi       Decimal?      @db.Decimal(18, 2)
+  valor_pis       Decimal?      @db.Decimal(18, 2)
+  valor_cofins    Decimal?      @db.Decimal(18, 2)
+  valor_total     Decimal?      @db.Decimal(18, 2)
+  notas_fiscais   notas_fiscais @relation(fields: [id_nf], references: [id_nf], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model notas_fiscais_transporte {
+  id_nf_transporte BigInt        @id @default(autoincrement())
+  id_nf            BigInt
+  id_motorista     BigInt?
+  placa            String?       @db.VarChar(10)
+  especie          String?       @db.VarChar(40)
+  marca            String?       @db.VarChar(40)
+  qtde_volumes     Int?
+  peso_bruto       Decimal?      @db.Decimal(18, 2)
+  peso_liquido     Decimal?      @db.Decimal(18, 2)
+  tipo_frete       String?       @db.VarChar(5)
+  valor_frete      Decimal?      @db.Decimal(18, 2)
+  motoristas       motoristas?   @relation(fields: [id_motorista], references: [id_motorista], onDelete: NoAction, onUpdate: NoAction)
+  notas_fiscais    notas_fiscais @relation(fields: [id_nf], references: [id_nf], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model numeracao_fiscais {
+  id            BigInt    @id @default(autoincrement())
+  uuid          String    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa    BigInt
+  tipo_doc      String    @db.VarChar(10)
+  serie         String?   @db.VarChar(5)
+  modelo        String?   @db.VarChar(5)
+  ultimo_numero Int?
+  created_at    DateTime? @default(now()) @db.Timestamp(6)
+  updated_at    DateTime? @default(now()) @db.Timestamp(6)
+  empresa       empresa   @relation(fields: [id_empresa], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_empresa], map: "idx_numfisc_id_empresa")
+  @@index([tipo_doc], map: "idx_numfisc_tipo_doc")
+}
+
+model obrigacoes_funcionarios_tipo {
+  id                        BigInt                      @id @default(autoincrement())
+  uuid                      String                      @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  descricao                 String                      @db.VarChar(100)
+  ativo_sn                  Boolean?                    @default(true)
+  created_at                DateTime?                   @default(now()) @db.Timestamp(6)
+  updated_at                DateTime?                   @default(now()) @db.Timestamp(6)
+  contas_pagar_funcionarios contas_pagar_funcionarios[]
+
+  @@index([ativo_sn], map: "idx_obrigacoes_tipo_ativo")
+  @@index([uuid], map: "idx_obrigacoes_tipo_uuid")
+}
+
+model observacoes_itens {
+  id_obs        BigInt    @id @default(autoincrement())
+  uuid          String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_item       BigInt
+  observacao    String?
+  data_inclusao DateTime? @default(now()) @db.Timestamp(6)
+  isdeleted     Boolean?  @default(false)
+  itens         itens     @relation(fields: [id_item], references: [id_item], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_item], map: "idx_observacoes_item")
+}
+
+model ordens_producao {
+  id_ordem              BigInt                  @id @default(autoincrement())
+  uuid                  String                  @unique(map: "idx_ordens_producao_uuid") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa            BigInt
+  numero                String?                 @db.VarChar(20)
+  id_item_prod          BigInt
+  quantidade            Decimal                 @db.Decimal(18, 4)
+  data_emissao          DateTime?               @default(now()) @db.Timestamp(6)
+  data_inicio           DateTime?               @db.Timestamp(6)
+  data_fim              DateTime?               @db.Timestamp(6)
+  status                String                  @default("ABERTA") @db.VarChar(20)
+  custo_total           Decimal?                @db.Decimal(18, 2)
+  observacoes           String?
+  isdeleted             Boolean?                @default(false)
+  created_at            DateTime?               @default(now()) @db.Timestamp(6)
+  updated_at            DateTime?               @default(now()) @db.Timestamp(6)
+  custos_producao_eqp   custos_producao_eqp[]
+  custos_producao_hh    custos_producao_hh[]
+  movimentos_estoque    movimentos_estoque[]
+  empresa               empresa                 @relation(fields: [id_empresa], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  itens                 itens                   @relation(fields: [id_item_prod], references: [id_item], onDelete: NoAction, onUpdate: NoAction)
+  ordens_producao_itens ordens_producao_itens[]
+  requisicoes_estoque   requisicoes_estoque[]
+
+  @@unique([id_empresa, numero], map: "uq_op_numero_empresa")
+  @@index([id_empresa], map: "idx_op_empresa")
+  @@index([id_item_prod], map: "idx_op_itemprod")
+  @@index([status], map: "idx_op_status")
+}
+
+model ordens_producao_itens {
+  id_item_op      BigInt           @id @default(autoincrement())
+  uuid            String           @unique(map: "idx_ordens_producao_itens_uuid") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_ordem        BigInt
+  id_item_mp      BigInt
+  quantidade      Decimal          @db.Decimal(18, 4)
+  unidade         String?          @db.VarChar(5)
+  custo_unit      Decimal?         @db.Decimal(18, 4)
+  custo_total     Decimal?         @db.Decimal(18, 4)
+  isdeleted       Boolean?         @default(false)
+  created_at      DateTime?        @default(now()) @db.Timestamp(6)
+  updated_at      DateTime?        @default(now()) @db.Timestamp(6)
+  id_unidade      BigInt?
+  unidades_medida unidades_medida? @relation(fields: [id_unidade], references: [id_unidade], onDelete: NoAction, onUpdate: NoAction, map: "opi_unidade_fkey")
+  itens           itens            @relation(fields: [id_item_mp], references: [id_item], onDelete: NoAction, onUpdate: NoAction)
+  ordens_producao ordens_producao  @relation(fields: [id_ordem], references: [id_ordem], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_item_mp], map: "idx_opi_itemmp")
+  @@index([id_ordem], map: "idx_opi_ordem")
+}
+
+model pedido_itens {
+  id             BigInt         @id @default(autoincrement())
+  uuid           String         @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_pedido      BigInt
+  id_item        BigInt
+  quantidade     Decimal        @db.Decimal(18, 4)
+  preco_unitario Decimal        @db.Decimal(18, 4)
+  unidade        String?        @db.VarChar(10)
+  valor_total    Decimal?       @default(dbgenerated("(quantidade * preco_unitario)")) @db.Decimal(18, 4)
+  status         String?        @default("PENDENTE") @db.VarChar(20)
+  created_at     DateTime?      @default(now()) @db.Timestamp(6)
+  updated_at     DateTime?      @default(now()) @db.Timestamp(6)
+  itens          itens          @relation(fields: [id_item], references: [id_item], onDelete: NoAction, onUpdate: NoAction)
+  pedidos_compra pedidos_compra @relation(fields: [id_pedido], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model pedidos_compra {
+  id            BigInt          @id @default(autoincrement())
+  uuid          String          @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa    BigInt
+  id_fornecedor BigInt
+  numero        String          @db.VarChar(20)
+  data_emissao  DateTime?       @default(now()) @db.Timestamp(6)
+  status        String?         @default("ABERTO") @db.VarChar(20)
+  condicao_pgto String?         @db.VarChar(100)
+  observacao    String?
+  isdeleted     Boolean?        @default(false)
+  created_at    DateTime?       @default(now()) @db.Timestamp(6)
+  updated_at    DateTime?       @default(now()) @db.Timestamp(6)
+  notas_entrada notas_entrada[]
+  pedido_itens  pedido_itens[]
+  empresa       empresa         @relation(fields: [id_empresa], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  fornecedores  fornecedores    @relation(fields: [id_fornecedor], references: [id_fornecedor], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([id_empresa, numero], map: "uq_pedidos_compra")
+}
+
+model permissoes {
+  id_permissao     BigInt             @id @default(autoincrement())
+  codigo           String             @unique @db.VarChar(50)
+  descricao        String?
+  roles_permissoes roles_permissoes[]
+}
+
+model plano_contas {
+  id                   BigInt                 @id @default(autoincrement())
+  uuid                 String                 @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa           BigInt
+  codigo               String                 @db.VarChar(20)
+  descricao            String                 @db.VarChar(120)
+  id_pai               BigInt?
+  tipo                 String                 @db.VarChar(1)
+  natureza             String                 @db.VarChar(1)
+  eh_sintetica         Boolean?               @default(false)
+  nivel                Int
+  isdeleted            Boolean?               @default(false)
+  created_at           DateTime?              @default(now()) @db.Timestamp(6)
+  updated_at           DateTime?              @default(now()) @db.Timestamp(6)
+  movimento_financeiro movimento_financeiro[]
+  empresa              empresa                @relation(fields: [id_empresa], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  plano_contas         plano_contas?          @relation("plano_contasToplano_contas", fields: [id_pai], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  other_plano_contas   plano_contas[]         @relation("plano_contasToplano_contas")
+
+  @@unique([id_empresa, codigo], map: "uq_plano_contas")
+}
+
+model precos_itens {
+  id_preco       BigInt    @id @default(autoincrement())
+  uuid           String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_item        BigInt
+  preco_venda    Decimal?  @default(0) @db.Decimal(18, 2)
+  preco_atacado  Decimal?  @default(0) @db.Decimal(18, 2)
+  preco_minimo   Decimal?  @default(0) @db.Decimal(18, 2)
+  margem         Decimal?  @db.Decimal(9, 2)
+  margem_atacado Decimal?  @db.Decimal(9, 2)
+  data_inicio    DateTime? @default(now()) @db.Timestamp(6)
+  data_fim       DateTime? @db.Timestamp(6)
+  isdeleted      Boolean?  @default(false)
+  itens          itens     @relation(fields: [id_item], references: [id_item], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_item], map: "idx_precos_item")
+}
+
+model promocoes_itens {
+  id_promocao    BigInt    @id @default(autoincrement())
+  uuid           String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_item        BigInt
+  preco_promocao Decimal?  @db.Decimal(18, 2)
+  inicio         DateTime? @db.Timestamp(6)
+  fim            DateTime? @db.Timestamp(6)
+  isdeleted      Boolean?  @default(false)
+  itens          itens     @relation(fields: [id_item], references: [id_item], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_item], map: "idx_promocoes_item")
+}
+
+model prorrogacoes {
+  id             BigInt         @id @default(autoincrement())
+  uuid           String         @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_titulo      BigInt
+  data_anterior  DateTime       @db.Timestamp(6)
+  nova_data      DateTime       @db.Timestamp(6)
+  id_usuario     BigInt?
+  created_at     DateTime?      @default(now()) @db.Timestamp(6)
+  contas_receber contas_receber @relation(fields: [id_titulo], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuarios       usuarios?      @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model reparcelamento_parcelas {
+  id                BigInt          @id @default(autoincrement())
+  uuid              String          @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_reparcelamento BigInt
+  numero_parcela    Int
+  data_vencimento   DateTime        @db.Timestamp(6)
+  valor             Decimal         @db.Decimal(18, 2)
+  reparcelamentos   reparcelamentos @relation(fields: [id_reparcelamento], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model reparcelamentos {
+  id                      BigInt                    @id @default(autoincrement())
+  uuid                    String                    @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_cliente              BigInt
+  data                    DateTime                  @default(now()) @db.Timestamp(6)
+  valor_total             Decimal                   @db.Decimal(18, 2)
+  qtd_parcelas            Int
+  observacao              String?                   @db.VarChar(255)
+  id_usuario              BigInt?
+  created_at              DateTime?                 @default(now()) @db.Timestamp(6)
+  reparcelamento_parcelas reparcelamento_parcelas[]
+  cliente                 cliente                   @relation(fields: [id_cliente], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuarios                usuarios?                 @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model requisicao_itens {
+  id                 BigInt             @id @default(autoincrement())
+  uuid               String             @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_requisicao      BigInt
+  id_item            BigInt
+  quantidade         Decimal            @db.Decimal(18, 4)
+  unidade            String?            @db.VarChar(10)
+  status             String?            @default("PENDENTE") @db.VarChar(20)
+  observacao         String?            @db.VarChar(255)
+  created_at         DateTime?          @default(now()) @db.Timestamp(6)
+  updated_at         DateTime?          @default(now()) @db.Timestamp(6)
+  itens              itens              @relation(fields: [id_item], references: [id_item], onDelete: NoAction, onUpdate: NoAction)
+  requisicoes_compra requisicoes_compra @relation(fields: [id_requisicao], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model requisicoes_compra {
+  id               BigInt             @id @default(autoincrement())
+  uuid             String             @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa       BigInt
+  id_usuario       BigInt
+  data             DateTime?          @default(now()) @db.Timestamp(6)
+  status           String?            @default("ABERTA") @db.VarChar(20)
+  prioridade       String?            @db.VarChar(20)
+  observacao       String?
+  isdeleted        Boolean?           @default(false)
+  created_at       DateTime?          @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?          @default(now()) @db.Timestamp(6)
+  requisicao_itens requisicao_itens[]
+  empresa          empresa            @relation(fields: [id_empresa], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  usuarios         usuarios           @relation(fields: [id_usuario], references: [id_usuario], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model requisicoes_estoque {
+  id_req                    BigInt                      @id @default(autoincrement())
+  uuid                      String                      @unique(map: "idx_req_uuid") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa                BigInt
+  id_ordem                  BigInt
+  numero                    String?                     @db.VarChar(20)
+  data_emissao              DateTime?                   @default(now()) @db.Timestamp(6)
+  status                    String                      @default("PENDENTE") @db.VarChar(20)
+  observacoes               String?
+  isdeleted                 Boolean?                    @default(false)
+  created_at                DateTime?                   @default(now()) @db.Timestamp(6)
+  updated_at                DateTime?                   @default(now()) @db.Timestamp(6)
+  empresa                   empresa                     @relation(fields: [id_empresa], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  ordens_producao           ordens_producao             @relation(fields: [id_ordem], references: [id_ordem], onDelete: Cascade, onUpdate: NoAction)
+  requisicoes_estoque_itens requisicoes_estoque_itens[]
+
+  @@unique([id_empresa, numero], map: "uq_req_numero_empresa")
+  @@index([id_empresa], map: "idx_req_empresa")
+  @@index([id_ordem], map: "idx_req_ordem")
+}
+
+model requisicoes_estoque_itens {
+  id_req_item         BigInt              @id @default(autoincrement())
+  uuid                String              @unique(map: "idx_req_itens_uuid") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_req              BigInt
+  id_item             BigInt
+  quantidade          Decimal             @db.Decimal(18, 4)
+  quantidade_atendida Decimal?            @default(0) @db.Decimal(18, 4)
+  unidade             String?             @db.VarChar(5)
+  custo_unit          Decimal?            @db.Decimal(18, 4)
+  custo_total         Decimal?            @db.Decimal(18, 4)
+  isdeleted           Boolean?            @default(false)
+  created_at          DateTime?           @default(now()) @db.Timestamp(6)
+  updated_at          DateTime?           @default(now()) @db.Timestamp(6)
+  id_unidade          BigInt?
+  unidades_medida     unidades_medida?    @relation(fields: [id_unidade], references: [id_unidade], onDelete: NoAction, onUpdate: NoAction, map: "reqit_unidade_fkey")
+  itens               itens               @relation(fields: [id_item], references: [id_item], onDelete: NoAction, onUpdate: NoAction)
+  requisicoes_estoque requisicoes_estoque @relation(fields: [id_req], references: [id_req], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_item], map: "idx_req_itens_item")
+  @@index([id_req], map: "idx_req_itens_req")
+}
+
+model retorno_titulos {
+  id                 BigInt             @id @default(autoincrement())
+  uuid               String             @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_retorno         BigInt
+  id_titulo          BigInt?
+  nosso_numero       String?            @db.VarChar(30)
+  ocorrencia         String?            @db.VarChar(5)
+  motivo             String?            @db.VarChar(255)
+  valor_pago         Decimal?           @db.Decimal(18, 2)
+  data_baixa         DateTime?          @db.Timestamp(6)
+  retornos_bancarios retornos_bancarios @relation(fields: [id_retorno], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  contas_receber     contas_receber?    @relation(fields: [id_titulo], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model retornos_bancarios {
+  id              BigInt            @id @default(autoincrement())
+  uuid            String            @unique @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa      BigInt
+  banco           String?           @db.VarChar(10)
+  data            DateTime?         @db.Timestamp(6)
+  arquivo_nome    String?           @db.VarChar(255)
+  qtd_titulos     Int?
+  valor_total     Decimal?          @db.Decimal(18, 2)
+  created_at      DateTime?         @default(now()) @db.Timestamp(6)
+  retorno_titulos retorno_titulos[]
+  empresa         empresa           @relation(fields: [id_empresa], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model roles {
+  id_role          BigInt             @id @default(autoincrement())
+  nome             String             @unique @db.VarChar(50)
+  descricao        String?
+  roles_permissoes roles_permissoes[]
+  usuarios_roles   usuarios_roles[]
+}
+
+model roles_permissoes {
+  id_role      BigInt
+  id_permissao BigInt
+  permissoes   permissoes @relation(fields: [id_permissao], references: [id_permissao], onDelete: Cascade, onUpdate: NoAction)
+  roles        roles      @relation(fields: [id_role], references: [id_role], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([id_role, id_permissao])
+}
+
+model saldos_itens {
+  id_saldo   BigInt    @id @default(autoincrement())
+  uuid       String    @unique(map: "idx_saldos_itens_uuid") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa BigInt
+  id_item    BigInt
+  saldo      Decimal   @default(0) @db.Decimal(18, 4)
+  est_min    Decimal?  @db.Decimal(18, 2)
+  endereco   String?   @db.VarChar(20)
+  dt_ult_alt DateTime? @default(now()) @db.Timestamp(6)
+  isdeleted  Boolean?  @default(false)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+  empresa    empresa   @relation(fields: [id_empresa], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  itens      itens     @relation(fields: [id_item], references: [id_item], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([id_empresa, id_item], map: "uq_saldo_emp_item")
+  @@index([id_empresa], map: "idx_saldos_emp")
+  @@index([id_item], map: "idx_saldos_item")
+}
+
+model subgrupos {
+  id_subgrupo    BigInt     @id @default(autoincrement())
+  uuid           String     @unique(map: "idx_subgrupos_uuid") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_grupo       BigInt
+  descricao      String     @db.VarChar(100)
+  identificador  String?    @db.VarChar(10)
+  data_alteracao DateTime?  @db.Timestamp(6)
+  familias       familias[]
+  itens          itens[]
+  grupos         grupos     @relation(fields: [id_grupo], references: [id_grupo], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_grupo], map: "idx_subgrupos_grupo")
+}
+
+model tipos_pagamento {
+  id_tipo          BigInt             @id @default(autoincrement())
+  uuid             String             @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  descricao        String             @unique(map: "uq_tipo_pagamento") @db.VarChar(60)
+  categoria        String             @db.VarChar(20)
+  taxa_adm         Decimal?           @default(0) @db.Decimal(9, 4)
+  gera_comissao    Boolean?           @default(true)
+  exige_senha      Boolean?           @default(false)
+  integra_tef      Boolean?           @default(false)
+  pix              Boolean?           @default(false)
+  ativo            Boolean?           @default(true)
+  isdeleted        Boolean?           @default(false)
+  created_at       DateTime?          @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?          @default(now()) @db.Timestamp(6)
+  caixa_documentos caixa_documentos[]
+  caixa_pagamentos caixa_pagamentos[]
+  formas_pagamento formas_pagamento[]
+  venda_pagamentos venda_pagamentos[]
+}
+
+model tributacao_itens {
+  id_tributacao BigInt   @id @default(autoincrement())
+  uuid          String   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_item       BigInt
+  id_cst        BigInt?
+  id_clasfis    BigInt?
+  perc_ipi      Decimal? @default(0) @db.Decimal(9, 2)
+  perc_icms     Decimal? @default(0) @db.Decimal(9, 2)
+  perc_pis      Decimal? @default(0) @db.Decimal(9, 2)
+  perc_cofins   Decimal? @default(0) @db.Decimal(9, 2)
+  reducao_base  Boolean? @default(false)
+  isdeleted     Boolean? @default(false)
+  clasfis       clasfis? @relation(fields: [id_clasfis], references: [id_clasfis], onDelete: NoAction, onUpdate: NoAction)
+  cst           cst?     @relation(fields: [id_cst], references: [id_cst], onDelete: NoAction, onUpdate: NoAction)
+  itens         itens    @relation(fields: [id_item], references: [id_item], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([id_item], map: "idx_tributacao_item")
+}
+
+model unidades_medida {
+  id_unidade                                           BigInt                      @id @default(autoincrement())
+  uuid                                                 String                      @unique(map: "idx_unidades_uuid") @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sigla                                                String                      @unique(map: "uq_unidade_sigla") @db.VarChar(10)
+  descricao                                            String                      @db.VarChar(60)
+  fator_base                                           Decimal?                    @db.Decimal(18, 6)
+  unidade_base                                         BigInt?
+  ativo                                                Boolean?                    @default(true)
+  isdeleted                                            Boolean?                    @default(false)
+  created_at                                           DateTime?                   @default(now()) @db.Timestamp(6)
+  updated_at                                           DateTime?                   @default(now()) @db.Timestamp(6)
+  comandas_itens                                       comandas_itens[]
+  itens                                                itens[]
+  itens_bom_itens_bom_id_unidade_compTounidades_medida itens_bom[]                 @relation("itens_bom_id_unidade_compTounidades_medida")
+  itens_bom_itens_bom_id_unidade_paiTounidades_medida  itens_bom[]                 @relation("itens_bom_id_unidade_paiTounidades_medida")
+  ordens_producao_itens                                ordens_producao_itens[]
+  requisicoes_estoque_itens                            requisicoes_estoque_itens[]
+  unidades_medida                                      unidades_medida?            @relation("unidades_medidaTounidades_medida", fields: [unidade_base], references: [id_unidade], onDelete: NoAction, onUpdate: NoAction)
+  other_unidades_medida                                unidades_medida[]           @relation("unidades_medidaTounidades_medida")
+}
+
+model usuarios {
+  id_usuario            BigInt                  @id @default(autoincrement())
+  uuid                  String                  @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa            BigInt
+  login                 String                  @unique @db.VarChar(50)
+  senha_hash            String                  @db.VarChar(255)
+  nome                  String                  @db.VarChar(100)
+  email                 String?                 @db.VarChar(100)
+  telefone              String?                 @db.VarChar(20)
+  ativo                 Boolean?                @default(true)
+  administrador         Boolean?                @default(false)
+  created_at            DateTime?               @default(now()) @db.Timestamp(6)
+  updated_at            DateTime?               @default(now()) @db.Timestamp(6)
+  isdeleted             Boolean?                @default(false)
+  caixa_aberturas       caixa_aberturas[]
+  comandas              comandas[]
+  contas_pagar_baixas   contas_pagar_baixas[]
+  contas_receber_baixas contas_receber_baixas[]
+  lotes_cobranca        lotes_cobranca[]
+  prorrogacoes          prorrogacoes[]
+  reparcelamentos       reparcelamentos[]
+  requisicoes_compra    requisicoes_compra[]
+  empresa               empresa                 @relation(fields: [id_empresa], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  usuarios_config       usuarios_config[]
+  usuarios_roles        usuarios_roles[]
+  usuarios_vendedores   usuarios_vendedores[]
+}
+
+model usuarios_config {
+  id_config          BigInt    @id @default(autoincrement())
+  id_usuario         BigInt
+  limite_desc        Decimal?  @default(0) @db.Decimal(9, 2)
+  limite_acresc      Decimal?  @default(0) @db.Decimal(9, 2)
+  permite_multilogin Boolean?  @default(false)
+  modulo_acesso      String?   @db.VarChar(20)
+  setor              String?   @db.VarChar(50)
+  updated_at         DateTime? @default(now()) @db.Timestamp(6)
+  usuarios           usuarios  @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model usuarios_roles {
+  id_usuario BigInt
+  id_role    BigInt
+  roles      roles    @relation(fields: [id_role], references: [id_role], onDelete: Cascade, onUpdate: NoAction)
+  usuarios   usuarios @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([id_usuario, id_role])
+}
+
+model usuarios_vendedores {
+  id_vinculo  BigInt     @id @default(autoincrement())
+  id_usuario  BigInt
+  id_vendedor BigInt
+  usuarios    usuarios   @relation(fields: [id_usuario], references: [id_usuario], onDelete: Cascade, onUpdate: NoAction)
+  vendedores  vendedores @relation(fields: [id_vendedor], references: [id_vendedor], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([id_usuario, id_vendedor])
+}
+
+model veiculos {
+  id_veiculo BigInt    @id @default(autoincrement())
+  uuid       String    @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa BigInt
+  descricao  String?   @db.VarChar(60)
+  placa      String    @unique @db.VarChar(10)
+  modelo     String?   @db.VarChar(60)
+  ano        Int?
+  capacidade Decimal?  @db.Decimal(9, 2)
+  ativo      Boolean?  @default(true)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  empresa    empresa   @relation(fields: [id_empresa], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model venda_itens {
+  id_item_venda        BigInt                 @id @default(autoincrement())
+  id_venda             BigInt
+  id_item              BigInt
+  quantidade           Decimal                @db.Decimal(18, 4)
+  preco_unitario       Decimal                @db.Decimal(18, 4)
+  desconto_perc        Decimal?               @db.Decimal(9, 2)
+  desconto_valor       Decimal?               @db.Decimal(18, 2)
+  total_item           Decimal                @db.Decimal(18, 2)
+  custo_item           Decimal?               @db.Decimal(18, 2)
+  created_at           DateTime?              @default(now()) @db.Timestamp(6)
+  itens                itens                  @relation(fields: [id_item], references: [id_item], onDelete: NoAction, onUpdate: NoAction)
+  vendas               vendas                 @relation(fields: [id_venda], references: [id_venda], onDelete: Cascade, onUpdate: NoAction)
+  venda_itens_estoque  venda_itens_estoque[]
+  venda_itens_status   venda_itens_status[]
+  venda_itens_tributos venda_itens_tributos[]
+}
+
+model venda_itens_estoque {
+  id_item_estoque BigInt      @id @default(autoincrement())
+  id_item_venda   BigInt
+  lote            String?     @db.VarChar(50)
+  numero_serie    String?     @db.VarChar(100)
+  peso_bruto      Decimal?    @db.Decimal(18, 4)
+  peso_liquido    Decimal?    @db.Decimal(18, 4)
+  local_estoque   String?     @db.VarChar(20)
+  venda_itens     venda_itens @relation(fields: [id_item_venda], references: [id_item_venda], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model venda_itens_status {
+  id_status     BigInt      @id @default(autoincrement())
+  id_item_venda BigInt
+  status        String?     @db.VarChar(20)
+  usuario       String?     @db.VarChar(50)
+  data_status   DateTime?   @default(now()) @db.Timestamp(6)
+  venda_itens   venda_itens @relation(fields: [id_item_venda], references: [id_item_venda], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model venda_itens_tributos {
+  id_item_tributo BigInt      @id @default(autoincrement())
+  id_item_venda   BigInt
+  cst             String?     @db.VarChar(5)
+  cfop            String?     @db.VarChar(5)
+  base_icms       Decimal?    @db.Decimal(18, 2)
+  valor_icms      Decimal?    @db.Decimal(18, 2)
+  base_st         Decimal?    @db.Decimal(18, 2)
+  valor_st        Decimal?    @db.Decimal(18, 2)
+  valor_ipi       Decimal?    @db.Decimal(18, 2)
+  valor_pis       Decimal?    @db.Decimal(18, 2)
+  valor_cofins    Decimal?    @db.Decimal(18, 2)
+  venda_itens     venda_itens @relation(fields: [id_item_venda], references: [id_item_venda], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model venda_pagamentos {
+  id_pagamento        BigInt            @id @default(autoincrement())
+  id_venda            BigInt
+  id_tipo_pagamento   BigInt
+  id_formas_pagamento BigInt?
+  valor               Decimal           @db.Decimal(18, 2)
+  taxa_adm            Decimal?          @db.Decimal(9, 2)
+  data_recebimento    DateTime?         @db.Timestamp(6)
+  formas_pagamento    formas_pagamento? @relation(fields: [id_formas_pagamento], references: [id_forma], onDelete: NoAction, onUpdate: NoAction)
+  tipos_pagamento     tipos_pagamento   @relation(fields: [id_tipo_pagamento], references: [id_tipo], onDelete: NoAction, onUpdate: NoAction)
+  vendas              vendas            @relation(fields: [id_venda], references: [id_venda], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model venda_status {
+  id_status   BigInt    @id @default(autoincrement())
+  id_venda    BigInt
+  status      String    @db.VarChar(20)
+  data_status DateTime? @default(now()) @db.Timestamp(6)
+  usuario     String?   @db.VarChar(50)
+  vendas      vendas    @relation(fields: [id_venda], references: [id_venda], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model vendas {
+  id_venda         BigInt             @id @default(autoincrement())
+  uuid             String             @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa       BigInt
+  numero           Int
+  id_cliente       BigInt
+  id_vendedor      BigInt?
+  data_emissao     DateTime           @db.Timestamp(6)
+  status           String?            @default("ABERTA") @db.VarChar(20)
+  observacoes      String?
+  desconto_perc    Decimal?           @db.Decimal(9, 2)
+  desconto_valor   Decimal?           @db.Decimal(18, 2)
+  total_produtos   Decimal?           @db.Decimal(18, 2)
+  total_venda      Decimal?           @db.Decimal(18, 2)
+  total_nf         Decimal?           @db.Decimal(18, 2)
+  criado_em        DateTime?          @default(now()) @db.Timestamp(6)
+  atualizado_em    DateTime?          @default(now()) @db.Timestamp(6)
+  isdeleted        Boolean?           @default(false)
+  caixa_pagamentos caixa_pagamentos[]
+  contas_receber   contas_receber[]
+  entregas         entregas[]
+  notas_fiscais    notas_fiscais[]
+  venda_itens      venda_itens[]
+  venda_pagamentos venda_pagamentos[]
+  venda_status     venda_status[]
+  cliente          cliente            @relation(fields: [id_cliente], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  empresa          empresa            @relation(fields: [id_empresa], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  vendedores       vendedores?        @relation(fields: [id_vendedor], references: [id_vendedor], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([id_empresa, numero], map: "uq_venda_empresa_num")
+}
+
+model vendedores {
+  id_vendedor            BigInt                   @id @default(autoincrement())
+  uuid                   String                   @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id_empresa             BigInt
+  nome                   String                   @db.VarChar(100)
+  cpf                    String?                  @unique @db.VarChar(14)
+  setor                  String?                  @db.VarChar(50)
+  email                  String?                  @db.VarChar(100)
+  ramal                  String?                  @db.VarChar(10)
+  ddd                    String?                  @db.VarChar(3)
+  ativo                  Boolean?                 @default(true)
+  todos_clientes         Boolean?                 @default(false)
+  nao_soma_faturamento   Boolean?                 @default(false)
+  imagem_perfil          String?                  @db.VarChar(255)
+  tipo                   String?                  @db.Char(1)
+  created_at             DateTime?                @default(now()) @db.Timestamp(6)
+  updated_at             DateTime?                @default(now()) @db.Timestamp(6)
+  isdeleted              Boolean?                 @default(false)
+  comandas_itens         comandas_itens[]
+  usuarios_vendedores    usuarios_vendedores[]
+  vendas                 vendas[]
+  empresa                empresa                  @relation(fields: [id_empresa], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  vendedores_comissao    vendedores_comissao[]
+  vendedores_credenciais vendedores_credenciais[]
+  vendedores_metas       vendedores_metas[]
+}
+
+model vendedores_comissao {
+  id_regra               BigInt     @id @default(autoincrement())
+  id_vendedor            BigInt
+  tipo                   String     @db.Char(1)
+  percentual             Decimal?   @db.Decimal(9, 2)
+  percentual_recebimento Decimal?   @db.Decimal(9, 2)
+  limite_desconto        Decimal?   @db.Decimal(9, 2)
+  data_inicio            DateTime?  @default(now()) @db.Timestamp(6)
+  data_fim               DateTime?  @db.Timestamp(6)
+  vendedores             vendedores @relation(fields: [id_vendedor], references: [id_vendedor], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model vendedores_credenciais {
+  id_credencial BigInt     @id @default(autoincrement())
+  id_vendedor   BigInt
+  senha         String?    @db.VarChar(128)
+  usuario_vpn   String?    @db.VarChar(60)
+  senha_vpn     String?    @db.VarChar(128)
+  ultimo_login  DateTime?  @db.Timestamp(6)
+  vendedores    vendedores @relation(fields: [id_vendedor], references: [id_vendedor], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model vendedores_metas {
+  id_meta     BigInt     @id @default(autoincrement())
+  id_vendedor BigInt
+  meta_mensal Decimal?   @db.Decimal(18, 2)
+  mg_boa      Decimal?   @db.Decimal(9, 2)
+  mg_otima    Decimal?   @db.Decimal(9, 2)
+  mg_ruim     Decimal?   @db.Decimal(9, 2)
+  referencia  DateTime   @db.Date
+  created_at  DateTime?  @default(now()) @db.Timestamp(6)
+  vendedores  vendedores @relation(fields: [id_vendedor], references: [id_vendedor], onDelete: Cascade, onUpdate: NoAction)
+}
+

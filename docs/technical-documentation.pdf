@@ -1,0 +1,319 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [5 0 R 7 0 R 9 0 R] /Count 3 >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Length 3035 >>
+stream
+BT
+/F1 11 Tf
+1 14 TL
+72 780 Td
+(SRVGOLD - DOCUMENTA��O T�CNICA) Tj
+T*
+( ) Tj
+T*
+(VIS�O GERAL) Tj
+T*
+(O projeto SRVGold � uma API multi-tenant constru�da com NestJS \(https://nestjs.com/\) e Prisma \(https://www.prisma.io/\) para atender diferentes clientes \(tenants\) utilizando o mesmo c�digo base, mas bancos de dados isolados. O reposit�rio inclui infraestrutura para cria��o de novos tenants, roteamento din�mico de conex�es e m�dulos de dom�nio que manipulam entidades legadas do ERP.) Tj
+T*
+( ) Tj
+T*
+(ARQUITETURA E TECNOLOGIAS) Tj
+T*
+(� Runtime: Node.js 20 \(requer >= 18\).) Tj
+T*
+(� Framework: NestJS 11 com organiza��o modular \(controllers, services, DTOs\).) Tj
+T*
+(� ORM: Prisma 6 com dois schemas:) Tj
+T*
+(� prisma/schema.prisma: banco "main" com a tabela Tenant.) Tj
+T*
+(� prisma/erp.prisma: espelha a base legada \(centenas de tabelas\) para cada tenant.) Tj
+T*
+(� Banco de Dados: PostgreSQL multi-base. H� um banco principal com metadata \(Tenant\) e um banco por cliente \(nomeado tenant_<slug>\), obtido a partir de um template \(goldpdv\).) Tj
+T*
+(� Configura��o: Vari�veis de ambiente carregadas via @nestjs/config. Conex�es constru�das dinamicamente no TenantPrismaManager.) Tj
+T*
+(� Middlewares: TenantContextMiddleware injeta automaticamente o cliente Prisma do tenant com base no header x-tenant ou subdom�nio.) Tj
+T*
+( ) Tj
+T*
+(ESTRUTURA DE PASTAS) Tj
+T*
+(C�digo:) Tj
+T*
+(    src/) Tj
+T*
+(    +-- app.module.ts              // Registro global de m�dulos, providers e middleware) Tj
+T*
+(    +-- main.ts                    // Bootstrap NestJS com CORS habilitado) Tj
+T*
+(    +-- prisma.service.ts          // PrismaClient para o banco "main") Tj
+T*
+(    +-- tenant-prisma.manager.ts   // Factory de Prisma clients por tenant \(lazy + cache\)) Tj
+T*
+(    +-- middleware/) Tj
+T*
+(    �   +-- tenant-context.middleware.ts) Tj
+T*
+(    +-- tenants/) Tj
+T*
+(    �   +-- tenants.controller.ts   // POST /tenants) Tj
+T*
+(    �   +-- tenants.module.ts) Tj
+T*
+(    �   +-- tenants.service.ts      // Clona banco template + registra tenant) Tj
+T*
+(    +-- t_cli/ ...                  // CRUD para clientes \(exemplo de m�dulo funcional\)) Tj
+T*
+(    +-- t_emp/ ...                  // DTOs validados para empresas) Tj
+T*
+(    +-- t_usere/ ...                // CRUD da entidade `t_usere`) Tj
+T*
+(    +-- t_users/ ...                // CRUD da entidade `t_users`) Tj
+T*
+(Fim do c�digo) Tj
+T*
+(Outras pastas relevantes:) Tj
+T*
+(� prisma/: schemas Prisma e c�digo gerado \(prisma/generated/erp\).) Tj
+T*
+(� scripts/: automa��es em Node/TypeScript \(por exemplo migrate-tenants.ts\).) Tj
+T*
+(� docs/: artefatos de documenta��o \(este documento + PDF gerado\).) Tj
+T*
+( ) Tj
+T*
+(CONFIGURA��O DE AMBIENTE) Tj
+T*
+(1. Instalar depend�ncias) Tj
+T*
+(C�digo:) Tj
+T*
+(       npm install) Tj
+T*
+(Fim do c�digo) Tj
+T*
+(2. Gerar clientes Prisma \(necess�rio ap�s alterar schemas ou instalar o projeto\):) Tj
+T*
+(C�digo:) Tj
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 4 0 R>>
+endobj
+6 0 obj
+<< /Length 2511 >>
+stream
+BT
+/F1 11 Tf
+1 14 TL
+72 780 Td
+(       npx prisma generate) Tj
+T*
+(Fim do c�digo) Tj
+T*
+(3. Vari�veis de ambiente \(arquivo .env na raiz\):) Tj
+T*
+(� DATABASE_URL: conex�o com o banco principal \(main\).) Tj
+T*
+(� ERP_TEMPLATE_URL: conex�o com o banco template padr�o usados em scripts.) Tj
+T*
+(� BASE_PG_URL: prefixo da URL PostgreSQL para montar conex�es dos tenants.) Tj
+T*
+(� PG_HOST, PG_PORT, PG_USER, PG_PASSWORD: credenciais administrativas usadas para criar/clonar bancos.) Tj
+T*
+(� PG_SUPER_DB \(opcional, padr�o postgres\): banco acessado pelo usu�rio administrativo.) Tj
+T*
+(� PG_TEMPLATE \(opcional, padr�o goldpdv\): nome do banco template clonado.) Tj
+T*
+(� PORT \(opcional\): porta HTTP exposta pelo Nest \(padr�o 3000\).) Tj
+T*
+(   > Seguran�a: mantenha credenciais fora do controle de vers�o \(adicionar .env no .gitignore\) e rotacione senhas de ambientes compartilhados.) Tj
+T*
+( ) Tj
+T*
+(EXECU��O E SCRIPTS �TEIS) Tj
+T*
+(� Desenvolvimento \(watch mode\):) Tj
+T*
+(C�digo:) Tj
+T*
+(      npm run start:dev) Tj
+T*
+(Fim do c�digo) Tj
+T*
+(� Execu��o simples \(sem hot-reload\):) Tj
+T*
+(C�digo:) Tj
+T*
+(      npm run start) Tj
+T*
+(Fim do c�digo) Tj
+T*
+(� Build de produ��o + execu��o:) Tj
+T*
+(C�digo:) Tj
+T*
+(      npm run build && npm run start:prod) Tj
+T*
+(Fim do c�digo) Tj
+T*
+(� Testes:) Tj
+T*
+(C�digo:) Tj
+T*
+(      npm run test        # unit) Tj
+T*
+(      npm run test:e2e    # end-to-end) Tj
+T*
+(      npm run test:cov    # cobertura) Tj
+T*
+(Fim do c�digo) Tj
+T*
+(� Migra��o dos tenants existentes \(sincroniza schema ERP em todos os bancos\):) Tj
+T*
+(C�digo:) Tj
+T*
+(      npm run migrate:tenants) Tj
+T*
+(Fim do c�digo) Tj
+T*
+(  scripts/migrate-tenants.ts l� todos os registros de Tenant no banco main, monta URLs com BASE_PG_URL e executa prisma db push --schema=prisma/erp.prisma para cada banco f�sico.) Tj
+T*
+( ) Tj
+T*
+(MULTI-TENANCY) Tj
+T*
+(1. Registro de tenant: POST /tenants chama TenantsService.createTenant, que:) Tj
+T*
+(� Valida duplicidade de slug \(Tenant no banco main\).) Tj
+T*
+(� Cria um banco novo via pg.Pool clonando o template \(CREATE DATABASE ... WITH TEMPLATE ...\).) Tj
+T*
+(� Registra name, slug e db_name na tabela Tenant.) Tj
+T*
+(2. Resolu��o do tenant em runtime:) Tj
+T*
+(� TenantContextMiddleware l� x-tenant ou subdom�nio, busca o registro no banco main \(PrismaService\), e atribui ao request:) Tj
+T*
+(� tenantId \(ID num�rico do tenant\).) Tj
+ET
+endstream
+endobj
+7 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 6 0 R>>
+endobj
+8 0 obj
+<< /Length 2976 >>
+stream
+BT
+/F1 11 Tf
+1 14 TL
+72 780 Td
+(� tenantClient \(inst�ncia PrismaClient da base do tenant, providenciada pelo TenantPrismaManager\).) Tj
+T*
+(� Os controllers recebem RequestWithPrisma e delegam aos services que usam o client apropriado.) Tj
+T*
+(3. Gerenciamento de conex�es:) Tj
+T*
+(� TenantPrismaManager memoiza Promise<PrismaClient> por dbName, evitando condi��es de corrida ao criar m�ltiplos clientes simultaneamente.) Tj
+T*
+(� Conex�es s�o fechadas em onModuleDestroy, garantindo limpeza controlada na parada da aplica��o.) Tj
+T*
+( ) Tj
+T*
+(M�DULOS DE DOM�NIO \(EXEMPLOS\)) Tj
+T*
+(� t_users \(src/t_users\)) Tj
+T*
+(� CRUD completo sobre t_users \(entidade legada com atributos como cdusu, deusu, email\).) Tj
+T*
+(� DTOs \(CreateTUsersDto, UpdateTUsersDto\) com valida��es class-validator.) Tj
+T*
+( ) Tj
+T*
+(� t_usere \(src/t_usere\)) Tj
+T*
+(� Controlador e servi�o exp�em opera��es CRUD sobre t_usere \(relaciona usu�rios a empresas\).) Tj
+T*
+(� DTOs atualizados para refletir restri��es do schema Prisma: id � UUID opcional, codusu e codemp obrigat�rios, autocod opcional inteiro.) Tj
+T*
+( ) Tj
+T*
+(� t_cli, t_emp, t_comanda, etc.) Tj
+T*
+(� Cada m�dulo segue padr�o Nest: Module registra controller/service, controllers recebem RequestWithPrisma e chamam o service com o Prisma client do tenant.) Tj
+T*
+(� DTOs cobrem dezenas de campos herdados do ERP e utilizam decoradores class-validator para garantir tipos corretos.) Tj
+T*
+( ) Tj
+T*
+(CAMADA DE DADOS) Tj
+T*
+(� Banco principal \(Tenant\): gerenciado por PrismaService \(extends PrismaClient\). Schema simples em prisma/schema.prisma.) Tj
+T*
+(� Banco ERP: schema extenso \(prisma/erp.prisma\) com centenas de modelos. Codegen dispon�vel em prisma/generated/erp \(gerado por prisma generate\).) Tj
+T*
+(� Acesso: services n�o instanciam Prisma diretamente; recebem PrismaClient do middleware, garantindo isolamento por tenant.) Tj
+T*
+( ) Tj
+T*
+(OBSERVABILIDADE E LOGS) Tj
+T*
+(� TenantPrismaManager configura logs de n�vel warn para o Prisma multi-tenant \(pode ser ajustado\).) Tj
+T*
+(� Sugest�o: integrar nestjs-pino ou interceptors de logging para rastrear tenant em cada requisi��o.) Tj
+T*
+( ) Tj
+T*
+(BOAS PR�TICAS E PR�XIMOS PASSOS) Tj
+T*
+(� Valida��o adicional: adicionar guards/interceptors para verificar permiss�es por tenant e auditoria.) Tj
+T*
+(� Migrations vs db push: considerar o uso de prisma migrate para versionamento formal das mudan�as no schema ERP.) Tj
+T*
+(� Testes: expandir testes unit�rios/e2e cobrindo middleware e fluxo multi-tenant.) Tj
+T*
+(� Automa��o: incluir pipelines CI/CD que executem build, testes e script de migra��o em ambientes de staging.) Tj
+T*
+(� Seguran�a: usar secrets manager \(AWS Secrets Manager, Vault, etc.\) e restringir acesso ao banco template.) Tj
+T*
+( ) Tj
+T*
+(---) Tj
+T*
+(Documento gerado automaticamente por Codex CLI.) Tj
+T*
+( ) Tj
+ET
+endstream
+endobj
+9 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 8 0 R>>
+endobj
+xref
+0 10
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000127 00000 n 
+0000000197 00000 n 
+0000003284 00000 n 
+0000003409 00000 n 
+0000005972 00000 n 
+0000006097 00000 n 
+0000009125 00000 n 
+trailer
+<< /Size 10 /Root 1 0 R >>
+startxref
+9250
+%%EOF

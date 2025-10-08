@@ -9,24 +9,33 @@ export class ClienteService {
   constructor(private prisma: PrismaService) {}
 
   async create(data: CreateClienteDto) {
+    const {
+      cliente_associado,
+      cliente_dependente,
+      cliente_endereco,
+      cliente_referencia,
+      cliente_socio,
+      ...rest
+    } = data;
+
     return this.prisma.cliente.create({
       data: {
-        ...data,
-        cliente_associado: data.cliente_associado
-          ? { create: data.cliente_associado }
-          : undefined,
-        cliente_dependente: data.cliente_dependente
-          ? { create: data.cliente_dependente }
-          : undefined,
-        cliente_endereco: data.cliente_endereco
-          ? { create: data.cliente_endereco }
-          : undefined,
-        cliente_referencia: data.cliente_referencia
-          ? { create: data.cliente_referencia }
-          : undefined,
-        cliente_socio: data.cliente_socio
-          ? { create: data.cliente_socio }
-          : undefined,
+        ...rest,
+        ...(cliente_associado?.length && {
+          cliente_associado: { create: cliente_associado },
+        }),
+        ...(cliente_dependente?.length && {
+          cliente_dependente: { create: cliente_dependente },
+        }),
+        ...(cliente_endereco?.length && {
+          cliente_endereco: { create: cliente_endereco },
+        }),
+        ...(cliente_referencia?.length && {
+          cliente_referencia: { create: cliente_referencia },
+        }),
+        ...(cliente_socio?.length && {
+          cliente_socio: { create: cliente_socio },
+        }),
       },
       include: {
         cliente_associado: true,
@@ -71,25 +80,34 @@ export class ClienteService {
   }
 
   async update(id: number, data: UpdateClienteDto) {
+    const {
+      cliente_associado,
+      cliente_dependente,
+      cliente_endereco,
+      cliente_referencia,
+      cliente_socio,
+      ...rest
+    } = data;
+
     return this.prisma.cliente.update({
       where: { id },
       data: {
-        ...data,
-        cliente_associado: data.cliente_associado
-          ? { deleteMany: {}, create: data.cliente_associado }
-          : undefined,
-        cliente_dependente: data.cliente_dependente
-          ? { deleteMany: {}, create: data.cliente_dependente }
-          : undefined,
-        cliente_endereco: data.cliente_endereco
-          ? { deleteMany: {}, create: data.cliente_endereco }
-          : undefined,
-        cliente_referencia: data.cliente_referencia
-          ? { deleteMany: {}, create: data.cliente_referencia }
-          : undefined,
-        cliente_socio: data.cliente_socio
-          ? { deleteMany: {}, create: data.cliente_socio }
-          : undefined,
+        ...rest,
+        ...(cliente_associado && {
+          cliente_associado: { deleteMany: {}, create: cliente_associado },
+        }),
+        ...(cliente_dependente && {
+          cliente_dependente: { deleteMany: {}, create: cliente_dependente },
+        }),
+        ...(cliente_endereco && {
+          cliente_endereco: { deleteMany: {}, create: cliente_endereco },
+        }),
+        ...(cliente_referencia && {
+          cliente_referencia: { deleteMany: {}, create: cliente_referencia },
+        }),
+        ...(cliente_socio && {
+          cliente_socio: { deleteMany: {}, create: cliente_socio },
+        }),
       },
       include: {
         cliente_associado: true,

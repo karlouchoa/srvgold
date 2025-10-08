@@ -13,13 +13,20 @@ export class ItensService {
   constructor(private prisma: PrismaService) {}
 
   async create(data: CreateItensDto) {
+    const { fotos_itens, itens_bom, ...rest } = data;
+
     return this.prisma.itens.create({
       data: {
-        ...data,
-        fotos_itens: data.fotos_itens ? { create: data.fotos_itens } : undefined,
-        itens_bom_itens_bom_id_item_paiToitens: data.itens_bom
-          ? { create: data.itens_bom }
-          : undefined,
+        ...rest,
+        ...(fotos_itens?.length && { fotos_itens: { create: fotos_itens } }),
+        ...(itens_bom?.length && {
+          itens_bom_itens_bom_id_item_paiToitens: {
+            create: itens_bom.map((bom) => ({
+              ...bom,
+              id_empresa: rest.id_empresa,
+            })),
+          },
+        }),
       },
       include: {
         fotos_itens: true,
@@ -58,22 +65,42 @@ export class ItensService {
   }
 
   async update(id: number, data: UpdateItensDto) {
+    const { fotos_itens, itens_bom, ...rest } = data;
+
+    let empresaIdForBom = rest.id_empresa;
+    if (itens_bom && itens_bom.length && !empresaIdForBom) {
+      const existing = await this.prisma.itens.findUnique({
+        where: { id_item: id },
+        select: { id_empresa: true },
+      });
+      empresaIdForBom = existing?.id_empresa
+        ? Number(existing.id_empresa)
+        : undefined;
+    }
+
     return this.prisma.itens.update({
       where: { id_item: id },
       data: {
-        ...data,
-        fotos_itens: data.fotos_itens
-          ? {
-              deleteMany: {}, // apaga antigas
-              create: data.fotos_itens,
-            }
-          : undefined,
-        itens_bom_itens_bom_id_item_paiToitens: data.itens_bom
-          ? {
-              deleteMany: {},
-              create: data.itens_bom,
-            }
-          : undefined,
+        ...rest,
+        ...(fotos_itens && {
+          fotos_itens: {
+            deleteMany: {},
+            ...(fotos_itens.length ? { create: fotos_itens } : {}),
+          },
+        }),
+        ...(itens_bom && {
+          itens_bom_itens_bom_id_item_paiToitens: {
+            deleteMany: {},
+            ...(itens_bom.length && empresaIdForBom
+              ? {
+                  create: itens_bom.map((bom) => ({
+                    ...bom,
+                    id_empresa: empresaIdForBom!,
+                  })),
+                }
+              : {}),
+          },
+        }),
       },
       include: {
         fotos_itens: true,

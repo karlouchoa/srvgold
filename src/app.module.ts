@@ -22,14 +22,13 @@ import { TenantsService } from './tenants/tenants.service';
 import { TenantsModule } from './tenants/tenants.module';
 import { UsuariosModule } from './usuarios/usuarios.module';
 import { BancoModule } from './banco/banco.module';
-import { CaixaModule } from './caixa-aberturas/caixa-aberturas.module';
+import { CaixaAberturasModule } from './caixa-aberturas/caixa-aberturas.module';
 import { EmpresaModule } from './empresa/empresa.module';
 import { ItensModule } from './itens/itens.module';
 import { ClienteModule } from './cliente/cliente.module';
 import { VendedoresModule } from './vendedores/vendedores.module';
 import { VendasModule } from './vendas/vendas.module';
 import { VeiculosModule } from './veiculos/veiculos.module';
-import { UsuariosModule } from './usuarios/usuarios.module';
 import { UnidadesMedidaModule } from './unidades-medida/unidades-medida.module';
 import { PagamentosModule } from './pagamentos/pagamentos.module';
 import { ClassificacaoModule } from './classificacao/classificacao.module';
@@ -39,7 +38,10 @@ import { RequisicoesModule } from './requisicoes/requisicoes.module';
 
 @Module({
   /*  imports: [TenantsModule, ProductsModule], */
-  imports: [ConfigModule.forRoot({ isGlobal: true }), TenantsModule, UsuariosModule, BancoModule, CaixaModule, EmpresaModule, ItensModule, ClienteModule, VendedoresModule, VendasModule, VeiculosModule, UnidadesMedidaModule, PagamentosModule, ClassificacaoModule, RolesModule, RetornosBancariosModule, RequisicoesModule],   // â‘ 
+  imports: [ConfigModule.forRoot({ isGlobal: true }), TenantsModule, UsuariosModule, BancoModule, CaixaAberturasModule, 
+            EmpresaModule, ItensModule, ClienteModule, VendedoresModule, VendasModule, VeiculosModule, 
+            UnidadesMedidaModule, PagamentosModule, ClassificacaoModule, RolesModule, RetornosBancariosModule, 
+            RequisicoesModule],   // â‘ 
   controllers: [AppController],
   providers: [
     AppService,
@@ -64,4 +66,5 @@ export class AppModule implements NestModule {
       .forRoutes('*');
   }
 }
+
 

@@ -1,4 +1,3 @@
-export class CreateClienteDto {}
 import { IsString, IsOptional, IsBoolean, IsNumber, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ClienteAssociadoDto } from './cliente-associado.dto';

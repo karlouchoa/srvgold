@@ -1,4 +1,3 @@
-export class CreateItenDto {}
 import {
   IsString,
   IsOptional,

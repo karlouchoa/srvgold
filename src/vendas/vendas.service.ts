@@ -9,16 +9,42 @@ export class VendasService {
   constructor(private prisma: PrismaService) {}
 
   async create(data: CreateVendasDto) {
+    const { venda_itens, venda_pagamentos, venda_status, ...rest } = data;
+
     return this.prisma.vendas.create({
       data: {
-        ...data,
-        venda_itens: data.venda_itens ? { create: data.venda_itens } : undefined,
-        venda_pagamentos: data.venda_pagamentos
-          ? { create: data.venda_pagamentos }
-          : undefined,
-        venda_status: data.venda_status
-          ? { create: data.venda_status }
-          : undefined,
+        ...rest,
+        ...(venda_itens?.length && {
+          venda_itens: {
+            create: venda_itens.map(
+              ({
+                id_item,
+                venda_itens_estoque,
+                venda_itens_status,
+                venda_itens_tributos,
+                ...itemRest
+              }) => ({
+                ...itemRest,
+                itens: { connect: { id_item } },
+                ...(venda_itens_estoque?.length && {
+                  venda_itens_estoque: { create: venda_itens_estoque },
+                }),
+                ...(venda_itens_status?.length && {
+                  venda_itens_status: { create: venda_itens_status },
+                }),
+                ...(venda_itens_tributos?.length && {
+                  venda_itens_tributos: { create: venda_itens_tributos },
+                }),
+              }),
+            ),
+          },
+        }),
+        ...(venda_pagamentos?.length && {
+          venda_pagamentos: { create: venda_pagamentos },
+        }),
+        ...(venda_status?.length && {
+          venda_status: { create: venda_status },
+        }),
       },
       include: {
         venda_itens: {
@@ -81,19 +107,49 @@ export class VendasService {
   }
 
   async update(id: number, data: UpdateVendasDto) {
+    const { venda_itens, venda_pagamentos, venda_status, ...rest } = data;
+
     return this.prisma.vendas.update({
       where: { id_venda: id },
       data: {
-        ...data,
-        venda_itens: data.venda_itens
-          ? { deleteMany: {}, create: data.venda_itens }
-          : undefined,
-        venda_pagamentos: data.venda_pagamentos
-          ? { deleteMany: {}, create: data.venda_pagamentos }
-          : undefined,
-        venda_status: data.venda_status
-          ? { create: data.venda_status }
-          : undefined,
+        ...rest,
+        ...(venda_itens && {
+          venda_itens: {
+            deleteMany: {},
+            ...(venda_itens.length && {
+              create: venda_itens.map(
+                ({
+                  id_item,
+                  venda_itens_estoque,
+                  venda_itens_status,
+                  venda_itens_tributos,
+                  ...itemRest
+                }) => ({
+                  ...itemRest,
+                  itens: { connect: { id_item } },
+                  ...(venda_itens_estoque?.length && {
+                    venda_itens_estoque: { create: venda_itens_estoque },
+                  }),
+                  ...(venda_itens_status?.length && {
+                    venda_itens_status: { create: venda_itens_status },
+                  }),
+                  ...(venda_itens_tributos?.length && {
+                    venda_itens_tributos: { create: venda_itens_tributos },
+                  }),
+                }),
+              ),
+            }),
+          },
+        }),
+        ...(venda_pagamentos && {
+          venda_pagamentos: {
+            deleteMany: {},
+            ...(venda_pagamentos.length && { create: venda_pagamentos }),
+          },
+        }),
+        ...(venda_status?.length && {
+          venda_status: { create: venda_status },
+        }),
       },
       include: {
         venda_itens: {

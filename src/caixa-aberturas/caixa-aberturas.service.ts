@@ -45,16 +45,24 @@ export class CaixaAberturasService {
   }
 
   async update(id: number, data: UpdateCaixaAberturasDto) {
+    const { caixa_documentos, caixa_pagamentos, ...rest } = data;
+
     return this.prisma.caixa_aberturas.update({
       where: { id_caixa: id },
       data: {
-        ...data,
-        caixa_documentos: data.caixa_documentos
-          ? { upsert: { update: data.caixa_documentos, create: data.caixa_documentos } }
-          : undefined,
-        caixa_pagamentos: data.caixa_pagamentos
-          ? { upsert: { update: data.caixa_pagamentos, create: data.caixa_pagamentos } }
-          : undefined,
+        ...rest,
+        ...(caixa_documentos !== undefined && {
+          caixa_documentos: {
+            deleteMany: {},
+            create: caixa_documentos,
+          },
+        }),
+        ...(caixa_pagamentos !== undefined && {
+          caixa_pagamentos: {
+            deleteMany: {},
+            create: caixa_pagamentos,
+          },
+        }),
       },
       include: {
         caixa_documentos: true,
@@ -63,6 +71,7 @@ export class CaixaAberturasService {
     });
   }
 
+  
   async close(id: number, saldoFinal: number) {
     return this.prisma.caixa_aberturas.update({
       where: { id_caixa: id },

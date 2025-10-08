@@ -1,34 +1,34 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { CaixaService } from './caixa-aberturas.service';
-import { CreateCaixaDto } from './dto/create-caixa-aberturas.dto';
-import { UpdateCaixaDto } from './dto/update-caixa-aberturas.dto';
+import { CaixaAberturasService } from './caixa-aberturas.service';
+import { CreateCaixaAberturasDto } from './dto/create-caixa-aberturas.dto';
+import { UpdateCaixaAberturasDto } from './dto/update-caixa-aberturas.dto';
 
-@Controller('caixa')
-export class CaixaController {
-  constructor(private readonly caixaService: CaixaService) {}
+@Controller('caixa-aberturas')
+export class CaixaAberturasController {
+  constructor(private readonly caixaAberturasService: CaixaAberturasService) {}
 
   @Post()
-  create(@Body() createCaixaDto: CreateCaixaDto) {
-    return this.caixaService.create(createCaixaDto);
+  create(@Body() dto: CreateCaixaAberturasDto) {
+    return this.caixaAberturasService.create(dto);
   }
 
   @Get()
   findAll() {
-    return this.caixaService.findAll();
+    return this.caixaAberturasService.findAll();
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.caixaService.findOne(+id);
+    return this.caixaAberturasService.findOne(+id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateCaixaDto: UpdateCaixaDto) {
-    return this.caixaService.update(+id, updateCaixaDto);
+  update(@Param('id') id: string, @Body() dto: UpdateCaixaAberturasDto) {
+    return this.caixaAberturasService.update(+id, dto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.caixaService.remove(+id);
+    return this.caixaAberturasService.remove(+id);
   }
 }

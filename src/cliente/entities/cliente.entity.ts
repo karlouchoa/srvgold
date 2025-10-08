@@ -1,0 +1,32 @@
+export class Cliente {
+  id: bigint;
+  uuid: string;
+  id_empresa: bigint;
+  tipo: string;
+  nome_razao: string;
+  nome_fantasia?: string;
+  cpf_cnpj?: string;
+  inscricao_estadual?: string;
+  inscricao_municipal?: string;
+  suframa?: string;
+  email?: string;
+  telefone?: string;
+  celular?: string;
+  site?: string;
+  limite_credito?: number;
+  condicao_pagto?: number;
+  dia_vencimento?: number;
+  avaliacao_sn?: boolean;
+  atacadista_sn?: boolean;
+  id_vendedor?: bigint;
+  observacao?: string;
+  ativo_sn?: boolean;
+  comissao_vendedor_fixado_sn?: boolean;
+  ignora_analise_credito_sn?: boolean;
+  desconto_boleto_sn?: boolean;
+  id_tabela_preco?: bigint;
+  faturamento_mensal_sn?: boolean;
+  isdeleted?: boolean;
+  created_at?: Date;
+  updated_at?: Date;
+}
